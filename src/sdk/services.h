@@ -106,7 +106,7 @@ class CPlayer_MovementServices_Humanoid : public CPlayer_MovementServices
 
 public:
 	DECLARE_SCHEMA_CLASS_ENTITY(CPlayer_MovementServices_Humanoid);
-	SCHEMA_FIELD(float, m_flBhopaceFriction)
+	SCHEMA_FIELD(float, m_flSurfaceFriction)
 };
 
 class CCSPlayerBaseJump

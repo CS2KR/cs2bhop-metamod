@@ -55,7 +55,7 @@ struct alignas(8) RnShapeDesc_t
 {
 public:
 	uint32 m_nCollisionAttributeIndex;
-	uint32 m_nBhopacePropertyIndex;
+	uint32 m_nSurfacePropertyIndex;
 	CUtlString m_UserFriendlyName;
 	bool m_bUserFriendlyNameSealed;
 	bool m_bUserFriendlyNameLong;
@@ -103,7 +103,7 @@ public:
 	Vector m_vOrthographicAreas;
 	matrix3x4_t m_MassProperties;
 	float32 m_flVolume;
-	float32 m_flBhopaceArea;
+	float32 m_flSurfaceArea;
 	CUtlVector<RnVertex_t> m_Vertices;
 	CUtlVector<Vector> m_VertexPositions;
 	CUtlVector<RnHalfEdge_t> m_Edges;
@@ -346,7 +346,7 @@ struct CPhysAggregateData
 	CUtlVectorUltraConservative<const VPhysXJoint_t *> m_Joints;
 	void *m_pFeModel;
 	CUtlVectorUltraConservative<RnCollisionAttr_t> m_CollisionAttributes;
-	CUtlVectorUltraConservative<const CPhysBhopaceProperties *> m_BhopaceProperties;
+	CUtlVectorUltraConservative<const CPhysSurfaceProperties *> m_SurfaceProperties;
 	CUtlVectorUltraConservative<const CPhysAggregateData *> m_ParentResources;
 	const void *m_pDebugPartNames;
 	const char *m_pEmbeddedKeyvalues;

@@ -203,7 +203,7 @@ public:
 		{
 			auto touch = this->m_TouchList.AddToTailGetPtr();
 			touch->deltavelocity = m_TouchList[i].deltavelocity;
-			touch->trace.m_pBhopaceProperties = m_TouchList[i].trace.m_pBhopaceProperties;
+			touch->trace.m_pSurfaceProperties = m_TouchList[i].trace.m_pSurfaceProperties;
 			touch->trace.m_pEnt = m_TouchList[i].trace.m_pEnt;
 			touch->trace.m_pHitbox = m_TouchList[i].trace.m_pHitbox;
 			touch->trace.m_hBody = m_TouchList[i].trace.m_hBody;

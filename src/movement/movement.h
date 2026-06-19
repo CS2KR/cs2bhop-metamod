@@ -26,10 +26,10 @@ struct TraceHistory
 	bool didHit;
 	Vector m_vStartPos;  // start position
 	Vector m_vEndPos;    // final position
-	Vector m_vHitNormal; // bhopace normal at impact
+	Vector m_vHitNormal; // surface normal at impact
 	Vector m_vHitPoint;  // exact hit point if m_bExactHitPoint is true, otherwise equal to m_vEndPos
 
-	float m_flHitOffset; // bhopace normal hit offset
+	float m_flHitOffset; // surface normal hit offset
 	float m_flFraction;  // time completed, 1.0 = didn't hit anything
 
 	f32 error;
