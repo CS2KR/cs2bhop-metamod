@@ -22,7 +22,7 @@
 	"Spectator List"
 	{
 		// All spectators (players) - Alice, Bob, Charlie
-		"#format"	"{grey}There is no one spectating right now."
+		"#format"	"count:d,players:s"
 		"en"		"{grey}All spectators ({default}{count}{grey}) - {players}"
 		"chi"		"{grey}All spectators ({default}{count}{grey}) - {players}"
 		"ua"		"{grey}All spectators ({default}{count}{grey}) - {players}"
@@ -34,7 +34,7 @@
 	"Target Spectator List (None)"
 	{
 		// No one is spectating Bill right now.
-		"#format"	"{grey}All spectators ({default}{count}{grey}) - {players}"
+		"#format"	"name:s"
 		"en"		"{grey}There is no one spectating {lime}{name}{grey} right now."
 		"chi"		"{grey}There is no one spectating {lime}{name}{grey} right now."
 		"ua"		"{grey}There is no one spectating {lime}{name}{grey} right now."
@@ -46,7 +46,7 @@
 	"Target Spectator List"
 	{
 		// Spectating Bill (2) - Alice, Charlie
-		"#format"	"{grey}There is no one spectating {lime}{name}{grey} right now."
+		"#format"	"name:s,count:d,players:s"
 		"en"		"{grey}Spectating {lime}{name}{grey} ({default}{count}{grey}) - {players}"
 		"chi"		"{grey}Spectating {lime}{name}{grey} ({default}{count}{grey}) - {players}"
 		"ua"		"{grey}Spectating {lime}{name}{grey} ({default}{count}{grey}) - {players}"

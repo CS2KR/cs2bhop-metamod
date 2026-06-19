@@ -13,7 +13,7 @@
 	}
 	"Course Top - Table Name (Global Overall)"
 	{
-		"#format"	"{map_name} ({course_name}) {mode_name} Overall Server Top"
+		"#format"	"map_name:s,course_name:s,mode_name:s"
 		"en"		"{map_name} ({course_name}) {mode_name} Overall Global Top"
 		"chi"		"{map_name} ({course_name}) {mode_name} Overall Global Top"
 		"ua"		"{map_name} ({course_name}) {mode_name} Overall Global Top"

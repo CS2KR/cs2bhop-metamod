@@ -18,7 +18,7 @@
 	}
 	"2+ Teleports Text"
 	{
-		"#format"	"{yellow}1{grey} TP"
+		"#format"	"tp_count:d"
 		"en"		"{yellow}{tp_count}{grey} TPs"
 		"chi"		"{yellow}{tp_count}{grey} TPs"
 		"pl"		"{yellow}{tp_count}{grey} TPs"
@@ -37,7 +37,7 @@
 	{
 		// Must have a space here!
 		//  (+12:34.56)
-		"#format"	"{yellow}{tp_count}{grey} TPs"
+		"#format"	"color:s,diff_text:s"
 		"en"		" ({color}{diff_text}{grey})"
 		"chi"		" ({color}{diff_text}{grey})"
 		"ru"		" ({color}{diff_text}{grey})"
@@ -55,7 +55,7 @@
 	"Beat Course Info - Basic"
 	{
 		// GameChaos finished "blocks2006" in 10:06.84 | 128tick
-		"#format"	" ({color}{diff_text}{grey})"
+		"#format"	"player_name:s,course_name:s,time:s,mode_style_text:s"
 		"en"		"{lime}{player_name} {grey}finished {default}{course_name}{grey} in {default}{time}{grey} | {mode_style_text}"
 		"chi"		"{lime}{player_name} {grey}finished {default}{course_name}{grey} in {default}{time}{grey} | {mode_style_text}"
 		"ru"		"{lime}{player_name} {grey}finished {default}{course_name}{grey} in {default}{time}{grey} | {mode_style_text}"
@@ -73,7 +73,7 @@
 	"Beat Course Info - Local"
 	{
 		// Server: #1/24 Overall (-1:00.00)
-		"#format"	"{lime}{player_name} {grey}finished {default}{course_name}{grey} in {default}{time}{grey} | {mode_style_text}"
+		"#format"	"rank:d,max_rank:d,pb_diff_text:s"
 		"en"		"{grey}Server: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
 		"chi"		"{grey}Server: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
 		"ru"		"{grey}Server: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
@@ -91,7 +91,7 @@
 	"Beat Course Info - Global"
 	{
 		// Global: #1/24 Overall (-1:00.00)
-		"#format"	"{grey}Server: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
+		"#format"	"rank:d,max_rank:d,pb_diff_text:s,rank_pro:d,max_rank_pro:d,pb_diff_text_pro:s"
 		"en"		"{grey}Global: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
 		"chi"		"{grey}Global: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
 		"fi"		"{grey}Global: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
@@ -108,7 +108,7 @@
 	"Beat Course Info - Global Points"
 	{
 		// Course Points: 2345 Overall (+512) | Player Rating: 34475
-		"#format"	"{grey}Global: #{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}{pb_diff_text}"
+		"#format"	"points:.0f,points_gained:.0f,player_rating:.0f"
 		"en"		"{grey}Course Points: {purple}{points}{grey} {yellow}Overall{grey} (+{purple}{points_gained}{grey}) | Player Rating: {purple}{player_rating}{grey}"
 		"chi"		"{grey}Course Points: {purple}{points}{grey} {yellow}Overall{grey} (+{purple}{points_gained}{grey}) | Player Rating: {purple}{player_rating}{grey}"
 		"ua"		"{grey}Course Points: {purple}{points}{grey} {yellow}Overall{grey} (+{purple}{points_gained}{grey}) | Player Rating: {purple}{player_rating}{grey}"
@@ -247,7 +247,7 @@
 	}
 	"Can't Finish Run (Missed Checkpoint Zones)"
 	{
-		"#format"	"{darkred}You can't finish your run, because you missed a checkpoint zone."
+		"#format"	"missed_count:i"
 		"en"		"{darkred}You can't finish your run, because you missed {missed_count} checkpoint zones."
 		"chi"		"{darkred}You can't finish your run, because you missed {missed_count} checkpoint zones."
 		"sv"		"{darkred}You can't finish your run, because you missed {missed_count} checkpoint zones."
@@ -260,7 +260,7 @@
 	}
 	"Can't Finish Run (Missed Stage)"
 	{
-		"#format"	"{darkred}You can't finish your run, because you missed {missed_count} checkpoint zones."
+		"#format"	"stage_number:i"
 		"en"		"{darkred}You can't finish your run, because you missed stage zone {stage_number}."
 		"chi"		"{darkred}You can't finish your run, because you missed stage zone {stage_number}."
 		"sv"		"{darkred}You can't finish your run, because you missed stage zone {stage_number}."
@@ -273,7 +273,7 @@
 	}
 	"Touched too high stage number (Missed stage)"
 	{
-		"#format"	"{darkred}You can't finish your run, because you missed stage zone {stage_number}."
+		"#format"	"stage_number:i"
 		"en"		"{darkred}You missed stage zone {stage_number}!"
 		"chi"		"{darkred}You missed stage zone {stage_number}!"
 		"sv"		"{darkred}You missed stage zone {stage_number}!"
@@ -286,7 +286,7 @@
 	}
 	"No Start Position For Course"
 	{
-		"#format"	"{darkred}You missed stage zone {stage_number}!"
+		"#format"	"course_name:s"
 		"en"		"{darkred}Start position not found for course {default}{course_name}{darkred}!"
 		"chi"		"{darkred}Start position not found for course {default}{course_name}{darkred}!"
 		"sv"		"{darkred}Start position not found for course {default}{course_name}{darkred}!"
@@ -305,7 +305,7 @@
 	// Split #1: 12:34.56 (+12.34) | SPB +12.12 | PRO SPB +23.45
 	"Course Split Reached"
 	{
-		"#format"	"{darkred}You can't start your run with bhop(s)."
+		"#format"	"number:d,time_text:s,diff_text:s"
 		"en"		"{grey}Split {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
 		"chi"		"{grey}Split {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
 		"sv"		"{grey}Split {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
@@ -318,7 +318,7 @@
 	}
 	"Course Checkpoint Reached"
 	{
-		"#format"	"{grey}Split {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
+		"#format"	"number:d,time_text:s,diff_text:s"
 		"en"		"{grey}CP {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
 		"chi"		"{grey}CP {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
 		"sv"		"{grey}CP {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
@@ -330,7 +330,7 @@
 	}
 	"Course Stage Reached"
 	{
-		"#format"	"{grey}CP {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
+		"#format"	"number:d,time_text:s,diff_text:s"
 		"en"		"{grey}Stage {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
 		"chi"		"{grey}Stage {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
 		"sv"		"{grey}Stage {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
@@ -345,7 +345,7 @@
 	// The spaces are intentional.
 	"Server PB Diff (Overall)"
 	{
-		"#format"	"{grey}Stage {default}#{number}{grey}: {lime}{time_text}{grey}{diff_text}"
+		"#format"	"diff_time:s"
 		"en"		" | SPB {diff_time}"
 		"chi"		" | SPB {diff_time}"
 		"sv"		" | SPB {diff_time}"
@@ -356,7 +356,7 @@
 	}
 	"Global PB Diff (Overall)"
 	{
-		"#format"	" | SPB {diff_time}"
+		"#format"	"diff_time:s"
 		"en"		" | GPB {diff_time}"
 		"chi"		" | GPB {diff_time}"
 		"sv"		" | GPB {diff_time}"
@@ -367,7 +367,7 @@
 	}
 	"SR Diff (Overall)"
 	{
-		"#format"	" | GPB {diff_time}"
+		"#format"	"diff_time:s"
 		"en"		" | SR {diff_time}"
 		"chi"		" | SR {diff_time}"
 		"sv"		" | SR {diff_time}"
@@ -378,7 +378,7 @@
 	}
 	"WR Diff (Overall)"
 	{
-		"#format"	" | SR {diff_time}"
+		"#format"	"diff_time:s"
 		"en"		" | WR {diff_time}"
 		"chi"		" | WR {diff_time}"
 		"sv"		" | WR {diff_time}"
@@ -391,7 +391,7 @@
 	// You missed your best Overall time (01:23.45)
 	"Missed Server PB (Overall)"
 	{
-		"#format"	" | WR {diff_time}"
+		"#format"	"time:s"
 		"en"		"{grey}You missed your best server {yellow}Overall{grey} time ({lightred}{time}{grey})."
 		"chi"		"{grey}You missed your best server {yellow}Overall{grey} time ({lightred}{time}{grey})."
 		"sv"		"{grey}You missed your best server {yellow}Overall{grey} time ({lightred}{time}{grey})."
@@ -404,7 +404,7 @@
 	}
 	"Missed Global PB (Overall)"
 	{
-		"#format"	"{grey}You missed your best server {yellow}Overall{grey} time ({lightred}{time}{grey})."
+		"#format"	"time:s"
 		"en"		"{grey}You missed your best global {yellow}Overall{grey} time ({lightred}{time}{grey})."
 		"chi"		"{grey}You missed your best global {yellow}Overall{grey} time ({lightred}{time}{grey})."
 		"sv"		"{grey}You missed your best global {yellow}Overall{grey} time ({lightred}{time}{grey})."
@@ -417,7 +417,7 @@
 	}
 	"Missed SR (Overall)"
 	{
-		"#format"	"{grey}You missed your best global {yellow}Overall{grey} time ({lightred}{time}{grey})."
+		"#format"	"time:s"
 		"en"		"{grey}You missed the {yellow}Overall{grey} server record time ({lightred}{time}{grey})."
 		"chi"		"{grey}You missed the {yellow}Overall{grey} server record time ({lightred}{time}{grey})."
 		"sv"		"{grey}You missed the {yellow}Overall{grey} server record time ({lightred}{time}{grey})."
@@ -430,7 +430,7 @@
 	}
 	"Missed WR (Overall)"
 	{
-		"#format"	"{grey}You missed the {yellow}Overall{grey} server record time ({lightred}{time}{grey})."
+		"#format"	"time:s"
 		"en"		"{grey}You missed the {yellow}Overall{grey} global record time ({lightred}{time}{grey})."
 		"chi"		"{grey}You missed the {yellow}Overall{grey} global record time ({lightred}{time}{grey})."
 		"sv"		"{grey}You missed the {yellow}Overall{grey} global record time ({lightred}{time}{grey})."
@@ -537,7 +537,7 @@
 	}
   	"Request - Failed (No Course in Current Map)"
 	{
-		"#format"	"{darkred}Failed to process current request."
+		"#format"	"map_name:s"
 		"en"		"{darkred}Failed to process current request. (No course exists in map {map_name})"
 		"chi"		"{darkred}Failed to process current request. (No course exists in map {map_name})"
 		"ua"		"{darkred}Failed to process current request. (No course exists in map {map_name})"
@@ -564,7 +564,7 @@
 
 	"Start Speed"
 	{
-		"#format"	"{grey}You have disabled the timer stop sound."
+		"#format"	"start_speed:.0f"
 		"en"		"{grey}Start speed: {lime}{start_speed}{grey}"
 		"pt"		"{grey}Velocidade inicial: {lime}{start_speed}{grey}"
 	}

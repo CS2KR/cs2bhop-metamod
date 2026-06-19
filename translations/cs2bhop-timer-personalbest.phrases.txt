@@ -37,7 +37,7 @@
 	"PB Time - Overall (Server)"
 	{
 		// Server: 12.34 (5 TPs) [#1/24 Overall]
-		"#format"	"{grey}You haven't set a time... yet."
+		"#format"	"time:s,rank:d,max_rank:d"
 		"en"		"{grey}Server: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}]"
 		"chi"		"{grey}Server: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}]"
 		"fi"		"{grey}Server: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}]"
@@ -55,7 +55,7 @@
 	"PB Time - Overall Rankless (Server)"
 	{
 		// Server: 12.34 (5 TPs) [Overall]
-		"#format"	"{grey}Server: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey}]"
+		"#format"	"time:s"
 		"en"		"{grey}Server: {default}{time}{grey} [{yellow}Overall{grey}]"
 		"chi"		"{grey}Server: {default}{time}{grey} [{yellow}Overall{grey}]"
 		"fi"		"{grey}Server: {default}{time}{grey} [{yellow}Overall{grey}]"
@@ -73,7 +73,7 @@
 	"PB Time - Overall (Global)"
 	{
 		// Global: 12.34 (5 TPs) [#1/24 Overall / 10000 pts]
-		"#format"	"{grey}Server: {default}{time}{grey} [{yellow}Overall{grey}]"
+		"#format"	"time:s,rank:d,max_rank:d,points:d"
 		"en"		"{grey}Global: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey} / {purple}{points}{grey} pts]"
 		"chi"		"{grey}Global: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey} / {purple}{points}{grey} pts]"
 		"ua"		"{grey}Global: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey} / {purple}{points}{grey} pts]"
@@ -84,7 +84,7 @@
 	"PB Time - Overall Rankless (Global)"
 	{
 		// Global: 12.34 (5 TPs) [Overall]
-		"#format"	"{grey}Global: {default}{time}{grey} [#{default}{rank}{grey}/{default}{max_rank}{grey} {yellow}Overall{grey} / {purple}{points}{grey} pts]"
+		"#format"	"time:s"
 		"en"		"{grey}Global: {default}{time}{grey} [{yellow}Overall{grey}]"
 		"chi"		"{grey}Global: {default}{time}{grey} [{yellow}Overall{grey}]"
 		"ua"		"{grey}Global: {default}{time}{grey} [{yellow}Overall{grey}]"
@@ -110,7 +110,7 @@
 	}
 	"PB Request - Invalid Course Name"
 	{
-		"#format"	"{darkred}Failed to retrieve personal best stats."
+		"#format"	"course_name:s"
 		"en"		"{darkred}Failed to retrieve personal best stats. {grey}(Invalid course name {default}{course_name}{grey})"
 		"chi"		"{darkred}Failed to retrieve personal best stats. {grey}(Invalid course name {default}{course_name}{grey})"
 		"fi"		"{darkred}Failed to retrieve personal best stats. {grey}(Invalid course name {default}{course_name}{grey})"

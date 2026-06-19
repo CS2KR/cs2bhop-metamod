@@ -7,7 +7,7 @@
 	}
 	"Error Message (Invalid FOV)"
 	{
-		"#format"	"{grey}Your FOV is {purple}{fov}{grey}."
+		"#format"	"fov:s,min:d,max:d"
 		"en"		"{darkred}Invalid FOV \"{fov}\" (allowed {min} - {max})."
 	}
 }

@@ -27,7 +27,7 @@
 	}
 	"Player Authenticated (Steam)"
 	{
-		"#format"	"{darkred}Warning{grey}: You do not have Prime Status upgrade. Your run will not be saved globally."
+		"#format"	"player:s"
 		"en"		"{grey}Player {default}{player}{grey} is authenticated with Steam."
 		"chi"		"{grey}Player {default}{player}{grey} is authenticated with Steam."
 		"sv"		"{grey}Player {default}{player}{grey} is authenticated with Steam."
@@ -41,7 +41,7 @@
 	}
 	"Player Not Authenticated (Steam)"
 	{
-		"#format"	"{grey}Player {default}{player}{grey} is authenticated with Steam."
+		"#format"	"player:s"
 		"en"		"{grey}Player {default}{player}{grey} is currently {yellow}not{grey} authenticated with Steam."
 		"chi"		"{grey}Player {default}{player}{grey} is currently {yellow}not{grey} authenticated with Steam."
 		"sv"		"{grey}Player {default}{player}{grey} is currently {yellow}not{grey} authenticated with Steam."
@@ -55,7 +55,7 @@
 	}
 	"Error Message (Player Not Found)"
 	{
-		"#format"	"{grey}Player {default}{player}{grey} is currently {yellow}not{grey} authenticated with Steam."
+		"#format"	"player:s"
 		"en"		"{darkred}Could not find a player going by \"{player}\"."
 		"chi"		"{darkred}Could not find a player going by \"{player}\"."
 		"pl"		"{darkred}Could not find a player going by \"{player}\"."

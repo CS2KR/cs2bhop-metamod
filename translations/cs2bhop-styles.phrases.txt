@@ -66,7 +66,7 @@
 	}
 	"Current Styles"
 	{
-		"#format"	"{grey}Usage: {default}bhop_removestyle <style>{grey}. Check console for possible styles!"
+		"#format"	"styles:s"
 		"en"		"{grey}Currently active styles: {default}{styles}"
 		"chi"		"{grey}Currently active styles: {default}{styles}"
 		"ru"		"{grey}Currently active styles: {default}{styles}"
@@ -133,7 +133,7 @@
 	}
 	"Style Removed"
 	{
-		"#format"	"{grey}You have cleared your styles."
+		"#format"	"style:s"
 		"en"		"{grey}You have removed {purple}{style}{grey} style."
 		"chi"		"{grey}You have removed {purple}{style}{grey} style."
 		"ru"		"{grey}You have removed {purple}{style}{grey} style."
@@ -150,7 +150,7 @@
 	}
 	"Style Added"
 	{
-		"#format"	"{grey}You have removed {purple}{style}{grey} style."
+		"#format"	"style:s"
 		"en"		"{grey}You have added {purple}{style}{grey} style."
 		"chi"		"{grey}You have added {purple}{style}{grey} style."
 		"ru"		"{grey}You have added {purple}{style}{grey} style."
@@ -167,7 +167,7 @@
 	}
 	"Style Already Active"
 	{
-		"#format"	"{grey}You have added {purple}{style}{grey} style."
+		"#format"	"style:s"
 		"en"		"{darkred}The {purple}{style}{darkred} style is already active."
 		"chi"		"{darkred}The {purple}{style}{darkred} style is already active."
 		"ru"		"{darkred}The {purple}{style}{darkred} style is already active."
@@ -185,7 +185,7 @@
 	"Style Not Active"
 	{
 		// The AutoBhop style is currently not available.
-		"#format"	"{darkred}The {purple}{style}{darkred} style is already active."
+		"#format"	"style:s"
 		"en"		"{darkred}The {purple}{style}{darkred} style is not active."
 		"chi"		"{darkred}The {purple}{style}{darkred} style is not active."
 		"ru"		"{darkred}The {purple}{style}{darkred} style is not active."
@@ -202,7 +202,7 @@
 	}
 	"Style Conflict"
 	{
-		"#format"	"{darkred}The {purple}{style}{darkred} style is not active."
+		"#format"	"style:s,conflict_style:s"
 		"en"		"{darkred}Unable to add style {purple}{style}{darkred} as the conflicting style {purple}{conflict_style}{darkred} is active."
 		"chi"		"{darkred}Unable to add style {purple}{style}{darkred} as the conflicting style {purple}{conflict_style}{darkred} is active."
 		"ru"		"{darkred}Unable to add style {purple}{style}{darkred} as the conflicting style {purple}{conflict_style}{darkred} is active."

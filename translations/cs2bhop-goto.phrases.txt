@@ -19,7 +19,7 @@
 	}
 	"Goto - Error Message (Player In Spec)"
 	{
-		"#format"	"{darkred}Stop your timer before trying to teleport."
+		"#format"	"player:s"
 		"en"		"{darkred}Cannot teleport. {player} is a spectator."
 		"chi"		"{darkred}Cannot teleport. {player} is a spectator."
 		"pl"		"{darkred}Cannot teleport. {player} is a spectator."
@@ -37,7 +37,7 @@
 	}
 	"Goto - Teleported"
 	{
-		"#format"	"{darkred}Cannot teleport. {player} is a spectator."
+		"#format"	"player:s"
 		"en"		"{grey}Teleported to {player}."
 		"chi"		"{grey}Teleported to {player}."
 		"pl"		"{grey}Teleported to {player}."

@@ -9,7 +9,7 @@ class Bhop128tModeService : public BhopModeService
 	using BhopModeService::BhopModeService;
 
 	static inline CVValue_t modeCvarValues[] = {
-		(float)10.0f,   // sv_accelerate
+		(float)5.5f,    // sv_accelerate
 		(bool)false,    // sv_accelerate_use_weapon_speed
 		(float)150.0f,  // sv_airaccelerate
 		(float)30.0f,   // sv_air_max_wishspeed

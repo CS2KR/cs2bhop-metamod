@@ -18,7 +18,7 @@
 	}
 	"Possible & Current Modes"
 	{
-		"#format"	"{grey}Usage: {default}bhop_mode <mode>.{grey} Check console for possible modes!"
+		"#format"	"mode:s"
 		"en"		"Possible modes: (Current mode is {mode})"
 		"chi"		"Possible modes: (Current mode is {mode})"
 		"pl"		"Possible modes: (Current mode is {mode})"
@@ -36,7 +36,7 @@
 	"Mode Not Available"
 	{
 		// The CSS mode is currently not available.
-		"#format"	"Possible modes: (Current mode is {mode})"
+		"#format"	"mode:s"
 		"en"		"{grey}The {purple}{mode} {grey}mode is currently not available."
 		"chi"		"{grey}The {purple}{mode} {grey}mode is currently not available."
 		"ru"		"{grey}The {purple}{mode} {grey}mode is currently not available."
@@ -55,7 +55,7 @@
 	"Switched Mode"
 	{
 		// You have switched to the 128tick mode.
-		"#format"	"{grey}The {purple}{mode} {grey}mode is currently not available."
+		"#format"	"mode:s"
 		"en"		"{grey}You have switched to the {purple}{mode} {grey}mode."
 		"chi"		"{grey}You have switched to the {purple}{mode} {grey}mode."
 		"ru"		"{grey}You have switched to the {purple}{mode} {grey}mode."
