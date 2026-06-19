@@ -11,6 +11,23 @@
 	Note: Whether touching is allowed is set determined by the mode, while Mapping API effects will be applied after touching events.
 */
 
+static_function void TeleportToBestStartOrRespawn(BhopPlayer *player)
+{
+	const BhopCourseDescriptor *course = player->timerService->GetCourse();
+	if (!course && Bhop::course::GetCourseCount() == 1)
+	{
+		course = Bhop::course::GetFirstCourse();
+	}
+
+	if (course && course->hasStartPosition)
+	{
+		player->Teleport(&course->startPosition, &course->startAngles, &vec3_origin);
+		return;
+	}
+
+	player->GetPlayerPawn()->Respawn();
+}
+
 // Whether we allow interaction from happening.
 bool BhopTriggerService::OnTriggerStartTouchPre(CBaseTrigger *trigger)
 {
@@ -269,6 +286,21 @@ void BhopTriggerService::OnMappingApiTriggerStartTouchPost(TriggerTouchTracker t
 			{
 				this->AddPushEvent(trigger);
 			}
+		}
+		break;
+		case BHOPTRIGGER_ACTION_STOP:
+		{
+			this->player->timerService->TimerStop(false);
+			this->player->timerService->InvalidateRun();
+			this->player->checkpointService->ResetCheckpoints(false);
+		}
+		break;
+		case BHOPTRIGGER_ACTION_RESET:
+		{
+			this->player->timerService->TimerStop(false);
+			this->player->timerService->InvalidateRun();
+			this->player->checkpointService->ResetCheckpoints(false);
+			TeleportToBestStartOrRespawn(this->player);
 		}
 		break;
 		default:

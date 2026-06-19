@@ -73,8 +73,9 @@ static_global struct
 static_global u32 g_mapCfgMaxVelocity = 0;
 static_global CTimer<> *g_errorTimer;
 static_global const char *g_errorPrefix = "{darkred} ERROR: ";
-static_global const char *g_triggerNames[] = {"Disabled",       "Modifier",        "Start zone", "End zone", "Bonus start zone",
-											  "Bonus end zone", "Checkpoint zone", "Stage zone", "Teleport"};
+static_global const char *g_triggerNames[] = {"Disabled",   "Modifier",         "Start zone",     "End zone", "Checkpoint zone",
+											  "Stage zone", "Bonus start zone", "Bonus end zone", "Teleport", "Destination",
+											  "Push",       "Action stop",      "Action reset"};
 
 static_function MappingInterface g_mappingInterface;
 
@@ -263,6 +264,16 @@ static_function bool Mapi_IsFakeEndZoneName(const std::string &name)
 		return true;
 	}
 	return Mapi_HasConfiguredTriggerName(g_mappingApi.fakeEndTriggerNames, name);
+}
+
+static_function bool Mapi_IsFakeStopTriggerName(const std::string &name)
+{
+	return name == "st_stop" || name == "surftimer_stop" || name == "timer_stop";
+}
+
+static_function bool Mapi_IsFakeResetTriggerName(const std::string &name)
+{
+	return name == "st_reset" || name == "surftimer_reset" || name == "timer_reset";
 }
 
 static_function f64 Mapi_PrintErrors()
@@ -502,6 +513,14 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 						trigger.type = BHOPTRIGGER_ZONE_END;
 						Mapi_AddUniqueTriggerName(g_mappingApi.detectedFakeEndTriggerNames, name.c_str());
 					}
+				}
+				else if (Mapi_IsFakeStopTriggerName(name))
+				{
+					trigger.type = BHOPTRIGGER_ACTION_STOP;
+				}
+				else if (Mapi_IsFakeResetTriggerName(name))
+				{
+					trigger.type = BHOPTRIGGER_ACTION_RESET;
 				}
 
 				// STAGE HOOK

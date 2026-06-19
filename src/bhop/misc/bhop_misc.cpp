@@ -954,13 +954,15 @@ CConVar<Color> bhop_trigger_multiple_colors[BHOPTRIGGER_COUNT] =
 	{"bhop_trigger_mappingapi_modifiers_color", FCVAR_NONE, "Color of Mapping API's Modifiers trigger (rgba) drawn by bhop_showtriggers.", Color(255, 255, 128, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_start_zone_color", FCVAR_NONE, "Color of Mapping API's Start Zone trigger (rgba) drawn by bhop_showtriggers.", Color(0, 255, 0, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_end_zone_color", FCVAR_NONE, "Color of Mapping API's End Zone trigger (rgba) drawn by bhop_showtriggers.", Color(255, 0, 0, 0x80), OnDebugColorCvarChanged},
-	{"bhop_trigger_mappingapi_bonus_start_zone_color", FCVAR_NONE, "Color of Mapping API's Bonus Start Zone trigger (rgba) drawn by bhop_showtriggers.", Color(0, 255, 0, 0x80), OnDebugColorCvarChanged},
-	{"bhop_trigger_mappingapi_bonus_end_zone_color", FCVAR_NONE, "Color of Mapping API's Bonus End Zone trigger (rgba) drawn by bhop_showtriggers.", Color(0, 255, 0, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_checkpoint_zone_color", FCVAR_NONE, "Color of Mapping API's Checkpoint Zone trigger (rgba) drawn by bhop_showtriggers.", Color(219, 255, 0, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_stage_zone_color", FCVAR_NONE, "Color of Mapping API's Stage Zone trigger (rgba) drawn by bhop_showtriggers.", Color(255, 157, 0, 0x80), OnDebugColorCvarChanged},
+	{"bhop_trigger_mappingapi_bonus_start_zone_color", FCVAR_NONE, "Color of Mapping API's Bonus Start Zone trigger (rgba) drawn by bhop_showtriggers.", Color(0, 255, 0, 0x80), OnDebugColorCvarChanged},
+	{"bhop_trigger_mappingapi_bonus_end_zone_color", FCVAR_NONE, "Color of Mapping API's Bonus End Zone trigger (rgba) drawn by bhop_showtriggers.", Color(0, 255, 0, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_general_teleport_color", FCVAR_NONE, "Color of Mapping API's General Teleport trigger (rgba) drawn by bhop_showtriggers.", Color(230, 117, 255, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_destination_color", FCVAR_NONE, "Color of Mapping API's Teleport Destination trigger (rgba) drawn by bhop_showtriggers.", Color(230, 117, 255, 0x80), OnDebugColorCvarChanged},
 	{"bhop_trigger_mappingapi_push_color", FCVAR_NONE, "Color of Mapping API's Push trigger (rgba) drawn by bhop_showtriggers.", Color(155, 255, 0, 0x80), OnDebugColorCvarChanged},
+	{"bhop_trigger_fake_stop_color", FCVAR_NONE, "Color of fake stop trigger (rgba) drawn by bhop_showtriggers.", Color(255, 96, 96, 0x80), OnDebugColorCvarChanged},
+	{"bhop_trigger_fake_reset_color", FCVAR_NONE, "Color of fake reset trigger (rgba) drawn by bhop_showtriggers.", Color(96, 160, 255, 0x80), OnDebugColorCvarChanged},
 };
 
 // clang-format on
