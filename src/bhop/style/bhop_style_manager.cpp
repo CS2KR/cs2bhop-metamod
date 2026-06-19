@@ -1,0 +1,550 @@
+#include "bhop_style.h"
+
+#include "filesystem.h"
+
+#include "utils/utils.h"
+#include "interfaces/interfaces.h"
+
+#include "utils/simplecmds.h"
+#include "../db/bhop_db.h"
+#include "bhop/mode/bhop_mode.h"
+#include "../timer/bhop_timer.h"
+#include "../language/bhop_language.h"
+#include "../option/bhop_option.h"
+#include "../telemetry/bhop_telemetry.h"
+#include "../profile/bhop_profile.h"
+
+#include "utils/plat.h"
+
+static_global BhopStyleManager styleManager;
+BhopStyleManager *g_pBhopStyleManager = &styleManager;
+static_global CUtlVector<BhopStyleManager::StylePluginInfo> styleInfos;
+
+static_global class BhopDatabaseServiceEventListener_Styles : public BhopDatabaseServiceEventListener
+{
+public:
+	virtual void OnDatabaseSetup() override;
+} databaseEventListener;
+
+static_global class BhopOptionServiceEventListener_Styles : public BhopOptionServiceEventListener
+{
+	virtual void OnPlayerPreferencesLoaded(BhopPlayer *player) override;
+} optionEventListener;
+
+void Bhop::style::InitStyleManager()
+{
+	static_persist bool initialized = false;
+	if (initialized)
+	{
+		return;
+	}
+	BhopDatabaseService::RegisterEventListener(&databaseEventListener);
+	BhopOptionService::RegisterEventListener(&optionEventListener);
+	initialized = true;
+}
+
+void Bhop::style::LoadStylePlugins()
+{
+	char buffer[1024];
+	g_SMAPI->PathFormat(buffer, sizeof(buffer), "addons/cs2bhop/styles/*%s", MODULE_EXT);
+	FileFindHandle_t findHandle = {};
+	const char *output = g_pFullFileSystem->FindFirstEx(buffer, "GAME", &findHandle);
+	if (output)
+	{
+		int ret;
+		ISmmPluginManager *pluginManager = (ISmmPluginManager *)g_SMAPI->MetaFactory(MMIFACE_PLMANAGER, &ret, 0);
+		if (ret == META_IFACE_FAILED)
+		{
+			return;
+		}
+		char error[256];
+		char fullPath[1024];
+		do
+		{
+			g_SMAPI->PathFormat(fullPath, sizeof(fullPath), "%s/addons/cs2bhop/styles/%s", g_SMAPI->GetBaseDir(), output);
+			bool already = false;
+			pluginManager->Load(fullPath, g_PLID, already, error, sizeof(error));
+			output = g_pFullFileSystem->FindNext(findHandle);
+		} while (output);
+
+		g_pFullFileSystem->FindClose(findHandle);
+	}
+}
+
+void Bhop::style::UpdateStyleDatabaseID(CUtlString name, i32 id)
+{
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (!V_stricmp(styleInfos[i].longName, name))
+		{
+			styleInfos[i].databaseID = id;
+			break;
+		}
+	}
+}
+
+BhopStyleManager::StylePluginInfo Bhop::style::GetStyleInfo(BhopStyleService *style)
+{
+	BhopStyleManager::StylePluginInfo emptyInfo;
+	if (!style)
+	{
+		META_CONPRINTF("[Bhop] Warning: Getting style info from a nullptr!\n");
+		return emptyInfo;
+	}
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (!V_stricmp(style->GetStyleName(), styleInfos[i].longName))
+		{
+			return styleInfos[i];
+		}
+	}
+	return emptyInfo;
+}
+
+BhopStyleManager::StylePluginInfo Bhop::style::GetStyleInfo(CUtlString styleName)
+{
+	BhopStyleManager::StylePluginInfo emptyInfo;
+	if (styleName.IsEmpty())
+	{
+		META_CONPRINTF("[Bhop] Warning: Getting style info from an empty string!\n");
+		return emptyInfo;
+	}
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (styleName.IsEqual_FastCaseInsensitive(styleInfos[i].shortName) || styleName.IsEqual_FastCaseInsensitive(styleInfos[i].longName))
+		{
+			return styleInfos[i];
+		}
+	}
+	return emptyInfo;
+}
+
+bool BhopStyleManager::RegisterStyle(PluginId id, const char *shortName, const char *longName, StyleServiceFactory factory,
+									 const char **incompatibleStyles, u32 incompatibleStylesCount)
+{
+	// clang-format off
+	if (!shortName || V_strlen(shortName) == 0  || V_strlen(shortName) > 64
+		|| !longName || V_strlen(longName) == 0 || V_strlen(longName) > 64)
+	//clang-format on
+	{
+		return false;
+	}
+	StylePluginInfo *info = nullptr;
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (!V_stricmp(styleInfos[i].shortName, shortName) || !V_stricmp(styleInfos[i].longName, longName))
+		{
+			if (styleInfos[i].id > 0)
+			{
+				return false;
+			}
+			info = &styleInfos[i];
+			break;
+		}
+	}
+
+	// Add to the list otherwise, and update the database for ID.
+	if (!info)
+	{
+		info = styleInfos.AddToTailGetPtr();
+		// If there is already information about this mode while the ID is -1, that means it has to come from the database, so no need to update it.
+		BhopDatabaseService::InsertAndUpdateStyleIDs(longName, shortName);
+	}
+	*info = {id, shortName, longName, factory};
+
+	ISmmPluginManager *pluginManager = (ISmmPluginManager *)g_SMAPI->MetaFactory(MMIFACE_PLMANAGER, nullptr, nullptr);
+	const char *path;
+	pluginManager->Query(id, &path, nullptr, nullptr);
+	g_pBhopUtils->GetFileMD5(path, info->md5, sizeof(info->md5));
+
+	for (u32 i = 0; i < incompatibleStylesCount; i++)
+	{
+		info->incompatibleStyles.AddToTail(incompatibleStyles[i]);
+	}
+
+	return true;
+}
+
+void BhopStyleManager::UnregisterStyle(PluginId id)
+{
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (styleInfos[i].id == id)
+		{
+			for (u32 i = 0; i < MAXPLAYERS + 1; i++)
+			{
+				BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(i);
+				FOR_EACH_VEC(player->styleServices, i)
+				{
+					if (!V_stricmp(player->styleServices[i]->GetStyleName(), styleInfos[i].longName)
+						|| !V_stricmp(player->styleServices[i]->GetStyleShortName(), styleInfos[i].shortName))
+					{
+						this->RemoveStyle(player, styleInfos[i].longName);
+						break;
+					}
+				}
+			}
+			styleInfos[i].id = -1;
+			styleInfos[i].md5[0] = 0;
+			styleInfos[i].factory = nullptr;
+			styleInfos[i].incompatibleStyles.RemoveAll();
+			break;
+		}
+	}
+}
+
+void BhopStyleManager::Cleanup()
+{
+	int ret;
+	ISmmPluginManager *pluginManager = (ISmmPluginManager *)g_SMAPI->MetaFactory(MMIFACE_PLMANAGER, &ret, 0);
+	if (ret == META_IFACE_FAILED)
+	{
+		return;
+	}
+	char error[256];
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (styleInfos[i].id <= 0)
+		{
+			continue;
+		}
+		pluginManager->Unload(styleInfos[i].id, true, error, sizeof(error));
+	}
+}
+
+void BhopStyleManager::AddStyle(BhopPlayer *player, const char *styleName, bool silent, bool updatePreference)
+{
+	// Don't add style if it doesn't exist. Instead, print a list of styles to the client.
+	if (!styleName || !V_stricmp("", styleName))
+	{
+		player->languageService->PrintChat(true, false, "Add Style Command Usage");
+		// clang-format off
+		BhopStyleManager::PrintAllStyles(player);
+		return;
+		// clang-format on
+	}
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		if (!V_stricmp(player->styleServices[i]->GetStyleName(), styleName) || !V_stricmp(player->styleServices[i]->GetStyleShortName(), styleName))
+		{
+			player->languageService->PrintChat(true, false, "Style Already Active", styleName);
+			return;
+		}
+	}
+
+	StylePluginInfo info;
+
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (V_stricmp(styleInfos[i].shortName, styleName) == 0 || V_stricmp(styleInfos[i].longName, styleName) == 0)
+		{
+			info = styleInfos[i];
+			break;
+		}
+	}
+	if (!info.factory)
+	{
+		if (!silent)
+		{
+			player->languageService->PrintChat(true, false, "Style Not Available", styleName);
+		}
+		return;
+	}
+
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		// clang-format off
+		if (info.incompatibleStyles.HasElement(player->styleServices[i]->GetStyleName())
+			|| info.incompatibleStyles.HasElement(player->styleServices[i]->GetStyleShortName())
+			|| !player->styleServices[i]->IsCompatibleWithStyle(info.shortName)
+			|| !player->styleServices[i]->IsCompatibleWithStyle(info.longName))
+		// clang-format on
+		{
+			player->languageService->PrintChat(true, false, "Style Conflict", styleName, player->styleServices[i]->GetStyleName());
+			return;
+		}
+	}
+	player->styleServices.AddToTail(info.factory(player));
+	player->timerService->TimerStop();
+	player->styleServices.Tail()->Init();
+	if (updatePreference)
+	{
+		player->optionService->SetPreferenceStr("preferredStyles", styleManager.GetStylesString(player));
+	}
+	if (!silent)
+	{
+		player->languageService->PrintChat(true, false, "Style Added", info.longName);
+	}
+
+	player->profileService->UpdateClantag();
+}
+
+void BhopStyleManager::RemoveStyle(BhopPlayer *player, const char *styleName, bool silent, bool updatePreference)
+{
+	if (!styleName || !V_stricmp("", styleName))
+	{
+		player->languageService->PrintChat(true, false, "Remove Style Command Usage");
+		return;
+	}
+
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		auto style = player->styleServices[i];
+		if (!V_stricmp(style->GetStyleName(), styleName) || !V_stricmp(style->GetStyleShortName(), styleName))
+		{
+			style->Cleanup();
+			if (!silent)
+			{
+				player->languageService->PrintChat(true, false, "Style Removed", style->GetStyleName());
+			}
+			player->styleServices.Remove(i);
+			delete style;
+			if (updatePreference)
+			{
+				player->optionService->SetPreferenceStr("preferredStyles", styleManager.GetStylesString(player));
+			}
+			return;
+		}
+	}
+	if (!silent)
+	{
+		player->languageService->PrintChat(true, false, "Style Not Active", styleName);
+	}
+
+	player->profileService->UpdateClantag();
+}
+
+void BhopStyleManager::ToggleStyle(BhopPlayer *player, const char *styleName, bool silent, bool updatePreference)
+{
+	// Don't change style if it doesn't exist. Instead, print a list of styles to the client.
+	if (!styleName || !V_stricmp("", styleName))
+	{
+		player->languageService->PrintChat(true, false, "Toggle Style Command Usage");
+		BhopStyleManager::PrintAllStyles(player);
+		return;
+	}
+
+	// Try to remove styles first
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		auto style = player->styleServices[i];
+		if (!V_stricmp(style->GetStyleName(), styleName) || !V_stricmp(style->GetStyleShortName(), styleName))
+		{
+			style->Cleanup();
+			if (!silent)
+			{
+				player->languageService->PrintChat(true, false, "Style Removed", style->GetStyleName());
+			}
+			player->styleServices.Remove(i);
+			delete style;
+			if (updatePreference)
+			{
+				player->optionService->SetPreferenceStr("preferredStyles", styleManager.GetStylesString(player));
+			}
+			return;
+		}
+	}
+	StylePluginInfo info;
+
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (V_stricmp(styleInfos[i].shortName, styleName) == 0 || V_stricmp(styleInfos[i].longName, styleName) == 0)
+		{
+			info = styleInfos[i];
+			break;
+		}
+	}
+	if (!info.factory)
+	{
+		if (!silent)
+		{
+			player->languageService->PrintChat(true, false, "Style Not Available", styleName);
+		}
+		return;
+	}
+
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		// clang-format off
+		if (info.incompatibleStyles.HasElement(player->styleServices[i]->GetStyleName())
+			|| info.incompatibleStyles.HasElement(player->styleServices[i]->GetStyleShortName())
+			|| !player->styleServices[i]->IsCompatibleWithStyle(info.shortName)
+			|| !player->styleServices[i]->IsCompatibleWithStyle(info.longName))
+		// clang-format on
+		{
+			player->languageService->PrintChat(true, false, "Style Conflict", styleName, player->styleServices[i]->GetStyleName());
+			return;
+		}
+	}
+	player->styleServices.AddToTail(info.factory(player));
+	player->timerService->TimerStop();
+	player->styleServices.Tail()->Init();
+	if (updatePreference)
+	{
+		player->optionService->SetPreferenceStr("preferredStyles", styleManager.GetStylesString(player));
+	}
+	if (!silent)
+	{
+		player->languageService->PrintChat(true, false, "Style Added", info.longName);
+	}
+
+	player->profileService->UpdateClantag();
+}
+
+void BhopStyleManager::ClearStyles(BhopPlayer *player, bool silent, bool updatePreference)
+{
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		player->styleServices[i]->Cleanup();
+	}
+	player->styleServices.PurgeAndDeleteElements();
+	if (updatePreference)
+	{
+		player->optionService->SetPreferenceStr("preferredStyles", styleManager.GetStylesString(player));
+	}
+	if (!silent)
+	{
+		player->languageService->PrintChat(true, false, "Styles Cleared");
+	}
+
+	player->profileService->UpdateClantag();
+}
+
+void BhopStyleManager::RefreshStyles(BhopPlayer *player, bool updatePreference)
+{
+	CUtlVector<StylePluginInfo> styles;
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		styles.AddToTail(Bhop::style::GetStyleInfo(player->styleServices[i]->GetStyleName()));
+	}
+	BhopStyleManager::ClearStyles(player, true, updatePreference);
+	FOR_EACH_VEC(styles, i)
+	{
+		BhopStyleManager::AddStyle(player, styles[i].longName, true, updatePreference);
+	}
+}
+
+CUtlString BhopStyleManager::GetStylesString(BhopPlayer *player)
+{
+	CUtlString result;
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		result.Append(player->styleServices[i]->GetStyleName());
+		result.Append(",");
+	}
+	result.TrimRight(',');
+	return result;
+}
+
+void BhopStyleManager::PrintActiveStyles(BhopPlayer *player)
+{
+	std::string styles = "";
+	FOR_EACH_VEC(player->styleServices, i)
+	{
+		styles += player->styleServices[i]->GetStyleName();
+		if (i != player->styleServices.Count() - 1)
+		{
+			styles += ", ";
+		}
+	}
+	player->languageService->PrintChat(true, false, "Current Styles", styles.c_str());
+}
+
+void BhopStyleManager::PrintAllStyles(BhopPlayer *player)
+{
+	player->languageService->PrintConsole(false, false, "Possible Styles");
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (styleInfos[i].id < 0)
+		{
+			continue;
+		}
+		// clang-format off
+		player->PrintConsole(false, false,
+			"%s (%s)",
+			styleInfos[i].longName,
+			styleInfos[i].shortName
+		);
+		// clang-format on
+	}
+}
+
+void BhopDatabaseServiceEventListener_Styles::OnDatabaseSetup()
+{
+	FOR_EACH_VEC(styleInfos, i)
+	{
+		if (styleInfos[i].databaseID == -1)
+		{
+			BhopDatabaseService::InsertAndUpdateStyleIDs(styleInfos[i].longName, styleInfos[i].shortName);
+		}
+	}
+	BhopDatabaseService::UpdateStyleIDs();
+}
+
+SCMD(bhop_style, SCFL_MODESTYLE)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	if (args->ArgC() == 1)
+	{
+		styleManager.PrintActiveStyles(player);
+		return MRES_SUPERCEDE;
+	}
+	if (args->Arg(1)[0] == '+')
+	{
+		const char *styleName = args->Arg(1) + 1;
+		styleManager.AddStyle(player, styleName);
+	}
+	else if (args->Arg(1)[0] == '-')
+	{
+		const char *styleName = args->Arg(1) + 1;
+		styleManager.RemoveStyle(player, styleName);
+	}
+	else
+	{
+		styleManager.ToggleStyle(player, args->Arg(1));
+	}
+	return MRES_SUPERCEDE;
+}
+
+SCMD(bhop_togglestyle, SCFL_MODESTYLE)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	styleManager.ToggleStyle(player, args->Arg(1));
+	return MRES_SUPERCEDE;
+}
+
+SCMD(bhop_addstyle, SCFL_MODESTYLE)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	styleManager.AddStyle(player, args->Arg(1));
+	return MRES_SUPERCEDE;
+}
+
+SCMD(bhop_removestyle, SCFL_MODESTYLE)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	styleManager.RemoveStyle(player, args->Arg(1));
+	return MRES_SUPERCEDE;
+}
+
+SCMD(bhop_clearstyles, SCFL_MODESTYLE)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	styleManager.ClearStyles(player);
+	return MRES_SUPERCEDE;
+}
+
+void BhopOptionServiceEventListener_Styles::OnPlayerPreferencesLoaded(BhopPlayer *player)
+{
+	std::string styles = player->optionService->GetPreferenceStr("preferredStyles", BhopOptionService::GetOptionStr("defaultStyles"));
+	// Give up changing styles if the player is already in the server for a while.
+	if (player->telemetryService->GetTimeInServer() < 30.0f && !player->timerService->GetTimerRunning())
+	{
+		styleManager.ClearStyles(player, true, false);
+		CSplitString splitStyles(styles.c_str(), ",");
+		FOR_EACH_VEC(splitStyles, i)
+		{
+			styleManager.AddStyle(player, splitStyles[i]);
+		}
+	}
+}

@@ -1,0 +1,204 @@
+#ifndef BHOP_REPLAY_H
+#define BHOP_REPLAY_H
+
+#include "common.h"
+#include "sdk/entity/cbaseplayerweapon.h"
+#include "bhop_replay.pb.h" // Protobuf definitions for replay header
+// relative to csgo/
+#define BHOP_REPLAY_PATH      "bhopreplays"
+#define BHOP_REPLAY_RUNS_PATH BHOP_REPLAY_PATH "/runs"
+
+class CSubtickMoveStep;
+class BhopPlayer;
+
+enum : u32
+{
+	BHOP_REPLAY_VERSION = 2,
+};
+
+// Maximum subtick moves per tick. The theoretical engine maximum is 64, but 36 is a much more reasonable amount.
+static constexpr u32 MAX_SUBTICK_MOVES = 36;
+
+enum ReplayType : u32
+{
+	RP_MANUAL = 0,  // Contain who saved the replay.
+	RP_CHEATER = 1, // Contain a reason and a reporter.
+	RP_RUN = 2,
+};
+
+enum RpEventType
+{
+	RPEVENT_TIMER_EVENT,
+	RPEVENT_MODE_CHANGE,
+	RPEVENT_STYLE_CHANGE,
+	RPEVENT_TELEPORT,
+};
+
+struct RpFlags
+{
+	bool ducking: 1;
+	bool ducked: 1;
+	bool desiresDuck: 1;
+};
+
+struct RpModeStyleInfo
+{
+	char name[64];
+	char shortName[64];
+	char md5[33];
+};
+
+struct RpStyleChangeInfo : public RpModeStyleInfo
+{
+	bool clearStyles;
+};
+
+struct RpEvent
+{
+	RpEventType type;
+	u32 serverTick;
+
+	union RpEventData
+	{
+		struct TimerEvent
+		{
+			enum TimerEventType
+			{
+				TIMER_START,
+				TIMER_END,
+				TIMER_STOP,
+				TIMER_PAUSE,
+				TIMER_RESUME,
+				TIMER_SPLIT,
+				TIMER_CPZ,
+				TIMER_STAGE,
+			} type;
+
+			i32 index; // Course ID for start/end, split number for split, checkpoint number for cpz, stage number for stage.
+			f32 time;  // Final time for end, time reached split/checkpoint/stage for split/cpz/stage. Current time for pause/stop/resume.
+		} timer;
+
+		RpModeStyleInfo modeChange;
+
+		RpStyleChangeInfo styleChange;
+
+		struct
+		{
+			bool hasOrigin;
+			bool hasAngles;
+			bool hasVelocity;
+			f32 origin[3];
+			f32 angles[3];
+			f32 velocity[3];
+		} teleport;
+	} data;
+};
+
+static_assert(std::is_trivial<RpEvent>::value, "RpEvent must be a trivial type");
+
+struct SubtickData
+{
+	u32 numSubtickMoves;
+
+	struct RpSubtickMove
+	{
+		f32 when;
+		// u32 instead of u64 because buttons above 32 bits look irrelevant.
+		u32 button;
+
+		union
+		{
+			bool pressed;
+
+			struct
+			{
+				f32 analog_forward_delta;
+				f32 analog_left_delta;
+				f32 pitch_delta;
+				f32 yaw_delta;
+			} analogMove;
+		};
+
+		bool IsAnalogInput()
+		{
+			return button == 0;
+		}
+
+		void FromMove(const CSubtickMoveStep &step);
+	} subtickMoves[MAX_SUBTICK_MOVES];
+};
+
+static_assert(std::is_trivial<SubtickData>::value, "SubtickData must be a trivial type");
+
+struct TickData
+{
+	u32 serverTick {};
+	f32 gameTime {};
+	f32 realTime {};
+	u64 unixTime {};
+	/* Note:
+		Pre data is obtained at the start of physics simulation, post data is obtained at the end.
+		Current input represents a simple version of CUserCmd, and is obtained on SetupMove/CreateMove pre hook.
+	*/
+	// This can change multiple times in a tick.
+	// For the sake of playback we just store and use the very last input (which should have a non zero frametime).
+	u32 cmdNumber {};
+	u32 clientTick {};
+	f32 forward {};
+	f32 left {};
+	f32 up {};
+	bool leftHanded {};
+	i32 weapon; // -1 if no weapon
+
+	struct
+	{
+		i32 index;
+		i32 checkpointCount;
+		i32 teleportCount;
+	} checkpoint {};
+
+	struct MovementData
+	{
+		Vector origin = vec3_origin;
+		Vector velocity = vec3_origin;
+		QAngle angles = vec3_angle;
+		u32 buttons[3] {};
+		f32 jumpPressedTime {};
+		// Quack
+		f32 duckSpeed {};
+		f32 duckAmount {};
+		f32 lastDuckTime {};
+		RpFlags replayFlags {};
+		u32 entityFlags {};
+		MoveType_t moveType = MOVETYPE_WALK;
+	} pre, post;
+};
+
+// While tick data is only recorded during certain conditions, metadata is recorded every time the server receives a move message from the client.
+struct CmdData
+{
+	u32 serverTick {};
+	f32 gameTime {};
+	f32 realTime {};
+	u64 unixTime {};
+	f32 framerate {};
+	f32 latency {};
+	f32 avgLoss {};
+	u32 cmdNumber {};
+	u32 clientTick {};
+	f32 forward {};
+	f32 left {};
+	f32 up {};
+	u64 buttons[3] {};
+	QAngle angles {};
+	i32 mousedx {};
+	i32 mousedy {};
+	f32 sensitivity {};
+	f32 m_yaw {};
+	f32 m_pitch {};
+};
+
+// Unified protobuf header type
+using ReplayHeader = cs2bhop::replay::ReplayHeader;
+
+#endif // BHOP_REPLAY_H

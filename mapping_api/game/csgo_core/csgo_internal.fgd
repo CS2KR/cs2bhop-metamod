@@ -1,0 +1,89 @@
+// KZ Mapping API Version 2
+// WIP. final version will likely be bumped up to 3.
+
+@OverrideClass = trigger_multiple
+[
+	timer_trigger_type(choices) : "Bhop | Trigger Type" : "0" : "The type of bhop trigger." =
+	[
+		0 : "Disabled"
+
+		1 : "Modifiers"
+
+		2 : "Start Zone"
+		3 : "End Zone"
+		4 : "Checkpoint Zone"
+		5 : "Stage Zone"
+
+		6 : "General Teleport"
+
+		7 : "Push"
+	]
+
+	// Bhop Modifiers
+	timer_modifier_gravity(float) {group="Bhop | Modifiers" enabled={variable="timer_trigger_type" value="1"}} : "Player Gravity" : "1.0" : "Scales the player's gravity by this amount."
+	timer_modifier_jump_impulse(float) {group="Bhop | Modifiers" enabled={variable="timer_trigger_type" value="1"}} : "Jump Speed Modifier" : "1.0" : "Multiply the player's base jump velocity by this value. This has exponential effect on jump heights, a 2x modifier will give players 4x the jump height."
+
+	// Bhop Zone
+	timer_zone_course_descriptor(target_destination) {group="Bhop | Zone" enabled={variable="timer_trigger_type" values=["5", "6", "7", "8", "9"]}} : "Course Descriptor" : : "info_target_server_only entity that describes this course. Every zone trigger must be associated with a course. Maximum length is 127 characters."
+
+	// Bhop Checkpoint Zone
+	timer_zone_checkpoint_number(integer) {group="Bhop | Zone" min="1" enabled={variable="timer_trigger_type" value="8"}} : "Checkpoint Number" : 1 : "Checkpoint number. Checkpoint numbers must be sequential, starting from 1."
+
+	// Bhop Stage Zone
+	timer_zone_stage_number(integer) {group="Bhop | Zone" min="1" enabled={variable="timer_trigger_type" value="9"}} : "Stage Number" : 1 : "Stage number. Stage numbers must be sequential, starting from 1."
+
+	// Bhop Teleport
+	timer_teleport_destination(target_destination) {group="Bhop | Teleport" enabled={variable="timer_trigger_type" values=["10", "11", "12", "13"]}} : "Destination" : : "The entity to which the player should be teleported. Using special targetnames starting with ! won't work. (!activator, !player etc) Maximum length is 127 characters."
+
+	timer_teleport_delay(float) {group="Bhop | Teleport" min="0.0" max="100.0" enabled={variable="timer_trigger_type" values=["10", "11", "12", "13"]}} : "Delay" : "0.0" : "This is how long the player can stay in the trigger. If it's one of the bhop triggers, then this means how long the player can stay on ground. For only bhop triggers the minimum delay is 0.1 seconds."
+	
+	timer_teleport_use_dest_angles(boolean) {group="Bhop | Teleport" enabled={variable="timer_trigger_type" values=["10", "11", "12", "13"]}} : "Use Destination Angles" : 1 : "Whether to set the player's view angles to the destination entity's angles or keep the player's current view angles."
+	
+	timer_teleport_reset_speed(boolean) {group="Bhop | Teleport" enabled={variable="timer_trigger_type" values=["10", "11", "12", "13"]}} : "Reset Speed" : 1 : "Whether to reset the player's speed when they get teleported"
+	
+	timer_teleport_reorient_player(boolean) {group="Bhop | Teleport" enabled={variable="timer_trigger_type" values=["10", "11", "12", "13"]}} : "Reorient Player" : 0 : "Reorients the player's velocity and view yaw angle by the teleport destination's yaw angle. This overrides the value of 'Use Destination Angles'. This will cause visible lag when the player moves their mouse."
+	
+	timer_teleport_relative(boolean) {group="Bhop | Teleport" enabled={variable="timer_trigger_type" values=["10", "11", "12", "13"]}} : "Relative To Trigger Origin" : 0 : "Only works if the Name is timer_teleport. "
+		+ "Gets the offset of the player to this trigger, then teleports the player to the destination with that offset added. If 'Reorient Player' is enabled, then the offset is rotated by the destination entity's yaw."
+		
+	// Bhop Push
+	timer_push_amount(vector) {group="Bhop | Push"  enabled={variable="timer_trigger_type" values=["14"]}} : "Push Amount" : "0 0 0" : "Push the player by this amount."
+	
+	timer_push_condition_start_touch(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Start Touch" : 0 : "Push the player upon trigger start touch."
+	timer_push_condition_touch(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Touch" : 0 : "Push the player upon trigger touch."
+	timer_push_condition_end_touch(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on End Touch" : 0 : "Push the player upon trigger end touch."
+	timer_push_condition_jump_event(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Jump Event" : 1 : "Push the player upon jump event."
+	timer_push_condition_jump_button(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Jump Button" : 0 : "Push the player upon jump button press."
+	timer_push_condition_attack(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Attack" : 0 : "Push the player upon player attack (primary)."
+	timer_push_condition_attack2(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Attack 2" : 0 : "Push the player upon player attack (secondary)."
+	timer_push_condition_use(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Push on Use" : 0 : "Push the player upon player use."
+	
+	
+	timer_push_abs_speed_x(boolean) {group="Bhop | Push"  enabled={variable="timer_trigger_type" values=["14"]}} : "Set Player X Speed" : 0 : "Whether to set the player's X speed to the specified value instead of adding to it."
+	timer_push_abs_speed_y(boolean) {group="Bhop | Push"  enabled={variable="timer_trigger_type" values=["14"]}} : "Set Player Y Speed" : 0 : "Whether to set the player's Y speed to the specified value instead of adding to it."
+	timer_push_abs_speed_z(boolean) {group="Bhop | Push"  enabled={variable="timer_trigger_type" values=["14"]}} : "Set Player Z Speed" : 0 : "Whether to set the player's Z speed to the specified value instead of adding to it."
+
+	timer_push_cancel_on_teleport(boolean) {group="Bhop | Push" enabled={variable="timer_trigger_type" values=["14"]}} : "Cancel on teleport" : 1 : "Remove the push from this trigger if the player is teleported."
+	timer_push_cooldown(float) {group="Bhop | Push" min="0.0" max="100.0" enabled={variable="timer_trigger_type" values=["14"]}} : "Push Cooldown" : "0.1" : "This is how long the player has to wait before they can be pushed again by this trigger."
+	timer_push_delay(float) {group="Bhop | Push" min="0.0" max="5.0" enabled={variable="timer_trigger_type" values=["14"]}} : "Push Delay" : "0.0" : "Delay the push by this long."
+]
+
+@OverrideClass = info_target_server_only
+[
+	timer_course_descriptor(boolean) : "Bhop | Is Course Descriptor" : 0 : "Mark this info_target_server_only as a course descriptor."
+
+	// Bhop Course Descriptor
+	timer_course_name(string) {group="Bhop | Course Descriptor" enabled={variable="timer_course_descriptor" value="1"}} : "Course Name" : : "The name of the course. Every zone trigger must be associated with a course name, which can be a maximum of 64 bytes long (non-english characters take up more bytes)."
+	timer_course_number(integer) {group="Bhop | Course Descriptor" min="1"  enabled={variable="timer_course_descriptor" value="1"}} : "Course Number" : 1 : "Course number to uniquely identify this course."
+	timer_course_max_velocity(integer) {group="Bhop | Course Descriptor" min="1"  enabled={variable="timer_course_descriptor" value="1"}} : "Course Max Velocity" : 3500 : "Max velocity for this course."
+]
+
+@OverrideClass = worldspawn
+[
+	timer_mapping_api_version(integer) {min="2" max="2"} : "Bhop | Mapping API Version" : 2 : "When the fgd changes with a Mapping API update and you update the fgd, then you have to change this parameter in hammer to the correct version (written at the top of the new fgd) on every map you use it on!"
+]
+
+@OverrideClass = info_teleport_destination 
+[
+	timer_zone_course_descriptor(target_destination) : "Bhop | Course Descriptor" : : "info_target_server_only entity that describes which course this teleport destination is connected to."
+]

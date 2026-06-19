@@ -1,0 +1,90 @@
+name: Build
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+
+jobs:
+  build-linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --prune --tags
+
+      - name: Make build directory
+        run: mkdir ./build
+
+      - name: Update version header
+        run: |
+          sed -i 's/"version": "0.0.0-dev"/"version": "${{ inputs.version }}"/' ./plugin-metadata.json
+
+      - name: Build and run Docker image
+        run: |
+          docker compose up
+
+      - name: Archive build
+        uses: actions/upload-artifact@v6
+        with:
+          name: cs2bhop-linux
+          path: ./build/package
+
+  build-windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --prune --tags
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install pip
+        shell: cmd
+        run: curl https://bootstrap.pypa.io/pip/3.6/get-pip.py | python
+
+      - name: Clone AMBuild
+        uses: actions/checkout@v5
+        with:
+          repository: alliedmodders/ambuild
+          path: ./ambuild
+
+      - name: Install AMBuild
+        run: python -m pip install ./ambuild
+
+      - name: Make build directory
+        run: mkdir ./build
+
+      - name: Configure AMBuild
+        working-directory: build
+        run: python3 ../configure.py --enable-optimize
+
+      - name: Update version header
+        shell: bash
+        run: |
+          sed -i 's/"version": "0.0.0-dev"/"version": "${{ inputs.version }}"/' ./plugin-metadata.json
+
+      - name: Run AMBuild
+        working-directory: build
+        run: ambuild
+
+      - name: Archive build
+        uses: actions/upload-artifact@v6
+        with:
+          name: cs2bhop-windows
+          path: ./build/package

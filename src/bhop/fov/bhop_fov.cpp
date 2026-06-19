@@ -1,0 +1,39 @@
+#include "bhop_fov.h"
+#include "utils/simplecmds.h"
+#include "bhop/language/bhop_language.h"
+
+void BhopFOVService::OnPhysicsSimulate()
+{
+	CCSPlayerController *controller = this->player->GetController();
+	if (!controller)
+	{
+		return;
+	}
+	u32 currentFOV = this->GetFOV();
+	if (controller->m_iDesiredFOV() != currentFOV)
+	{
+		controller->m_iDesiredFOV(currentFOV);
+	}
+}
+
+SCMD(bhop_fov, SCFL_PLAYER | SCFL_PREFERENCE)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+
+	if (V_strlen(args->ArgS()) > 0)
+	{
+		unsigned long newFOV = std::strtoul(args->ArgS(), nullptr, 10);
+		u32 minFOV = player->fovService->GetMinFOV();
+		u32 maxFOV = player->fovService->GetMaxFOV();
+		if (newFOV < minFOV || newFOV > maxFOV)
+		{
+			player->languageService->PrintChat(true, false, "Error Message (Invalid FOV)", args->ArgS(), minFOV, maxFOV);
+			return MRES_SUPERCEDE;
+		}
+
+		player->fovService->SetFOV(newFOV);
+	}
+
+	player->languageService->PrintChat(true, false, "FOV - Show", player->fovService->GetFOV());
+	return MRES_SUPERCEDE;
+}

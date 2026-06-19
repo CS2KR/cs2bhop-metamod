@@ -1,0 +1,23 @@
+#pragma once
+
+#include "cbaseentity.h"
+#include "sdk/ccollisionproperty.h"
+
+class CBaseModelEntity : public CBaseEntity
+{
+public:
+	DECLARE_SCHEMA_CLASS_ENTITY(CBaseModelEntity);
+
+	SCHEMA_FIELD(CCollisionProperty, m_Collision)
+	SCHEMA_FIELD(Color, m_clrRender)
+	SCHEMA_FIELD(uint8, m_nRenderMode)
+	SCHEMA_FIELD(float, m_fadeMinDist);
+};
+
+class CBeam : public CBaseModelEntity {
+public:
+	DECLARE_SCHEMA_CLASS_ENTITY(CBeam);
+
+	SCHEMA_FIELD(float, m_fWidth);
+	SCHEMA_FIELD(Vector, m_vecEndPos);
+};

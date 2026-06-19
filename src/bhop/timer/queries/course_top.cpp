@@ -1,0 +1,308 @@
+#include "base_request.h"
+#include "bhop/timer/bhop_timer.h"
+#include "bhop/db/bhop_db.h"
+#include "bhop/global/bhop_global.h"
+
+#include "utils/simplecmds.h"
+
+#include "vendor/sql_mm/src/public/sql_mm.h"
+// clang-format off
+#define COURSE_TOP_TABLE_KEY "Course Top - Table Name (Server Overall)"
+static_global const char *columnKeysLocal[] = {
+	"#",
+	"Course Top Header - Player Alias",
+	"Course Top Header - Time",
+	"Course Top Header - SteamID64",
+	"Course Top Header - Run ID"
+};
+
+#define COURSE_TOP_TABLE_KEY_GLOBAL "Course Top - Table Name (Global Overall)"
+static_global const char *columnKeysGlobal[] = {
+	"#",
+	"Course Top Header - Player Alias",
+	"Course Top Header - Time",
+	"Course Top Header - SteamID64",
+	"Course Top Header - Points",
+	"Course Top Header - Run ID"
+};
+
+// clang-format on
+
+struct CourseTopRequest : public BaseRequest
+{
+	using BaseRequest::BaseRequest;
+
+	static constexpr u64 ctopFeatures =
+		RequestFeature::Course | RequestFeature::Map | RequestFeature::Mode | RequestFeature::Offset | RequestFeature::Limit;
+
+	struct RunStats
+	{
+		CUtlString runID;
+		CUtlString name;
+		f64 time;
+		u64 steamid64;
+		u64 points {}; // 0 for local database
+
+		CUtlString GetName()
+		{
+			return name;
+		}
+
+		CUtlString GetRunID()
+		{
+			return runID;
+		}
+
+		CUtlString GetTime()
+		{
+			return utils::FormatTime(time);
+		}
+
+		CUtlString GetSteamID64()
+		{
+			CUtlString fmt;
+			fmt.Format("%llu", steamid64);
+			return fmt;
+		}
+
+		CUtlString GetPoints()
+		{
+			CUtlString fmt;
+			fmt.Format("%llu", points);
+			return fmt;
+		}
+	};
+
+	struct CourseTopData
+	{
+		CUtlVector<RunStats> overallData;
+	} srData, wrData;
+
+	virtual void PrintInstructions() override
+	{
+		BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(this->userID);
+		if (!player)
+		{
+			return;
+		}
+		player->languageService->PrintChat(true, false, "Course Top Command Usage");
+		player->languageService->PrintConsole(false, false, "Course Top Command Usage - Console");
+	}
+
+	virtual void QueryLocal()
+	{
+		if (this->requestingFirstCourse)
+		{
+			return;
+		}
+		if (this->localStatus == ResponseStatus::ENABLED)
+		{
+			this->localStatus = ResponseStatus::PENDING;
+
+			BhopPlayer *callingPlayer = g_pBhopPlayerManager->ToPlayer(userID);
+			if (!callingPlayer)
+			{
+				this->Invalidate();
+				return;
+			}
+
+			this->localStatus = ResponseStatus::PENDING;
+
+			u64 uid = this->uid;
+
+			auto onQuerySuccess = [uid](std::vector<ISQLQuery *> queries)
+			{
+				CourseTopRequest *req = (CourseTopRequest *)CourseTopRequest::Find(uid);
+				if (!req)
+				{
+					return;
+				}
+
+				req->localStatus = ResponseStatus::RECEIVED;
+				ISQLResult *result = queries[0]->GetResultSet();
+				if (result && result->GetRowCount() > 0)
+				{
+					while (result->FetchRow())
+					{
+						req->srData.overallData.AddToTail(
+							{result->GetString(0), result->GetString(2), result->GetFloat(3), (u64)result->GetInt64(1)});
+					}
+				}
+			};
+
+			auto onQueryFailure = [uid](std::string, int)
+			{
+				CourseTopRequest *req = (CourseTopRequest *)CourseTopRequest::Find(uid);
+				if (req)
+				{
+					req->localStatus = ResponseStatus::DISABLED;
+				}
+			};
+
+			BhopDatabaseService::QueryRecords(this->mapName, this->courseName, this->localModeID, this->limit, this->offset, onQuerySuccess,
+											  onQueryFailure);
+		}
+	}
+
+	virtual void QueryGlobal()
+	{
+		if (this->requestingFirstCourse)
+		{
+			return;
+		}
+
+		if (this->globalStatus == ResponseStatus::ENABLED)
+		{
+			auto callback = [uid = this->uid](Bhop::API::events::CourseTop &ctops)
+			{
+				CourseTopRequest *req = (CourseTopRequest *)CourseTopRequest::Find(uid);
+				if (!req)
+				{
+					return;
+				}
+
+				if (ctops.map.has_value() && ctops.course.has_value())
+				{
+					req->mapName = ctops.map->name.c_str();
+					req->courseName = ctops.course->name.c_str();
+					req->globalStatus = ResponseStatus::RECEIVED;
+				}
+				else
+				{
+					req->globalStatus = ResponseStatus::DISABLED;
+					return;
+				}
+
+				for (const auto &record : ctops.overall)
+				{
+					CUtlString id;
+					id.Format("%u", record.id);
+					req->wrData.overallData.AddToTail({id, record.player.name.c_str(), record.time, record.player.id, (u64)floor(record.points)});
+				}
+			};
+			this->globalStatus = ResponseStatus::PENDING;
+			BhopGlobalService::QueryCourseTop(std::string_view(this->mapName.Get(), this->mapName.Length()),
+											  std::string_view(this->courseName.Get(), this->courseName.Length()), this->apiMode, this->limit,
+											  this->offset, callback);
+		}
+	}
+
+	virtual void Reply()
+	{
+		BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(userID);
+		if (!player)
+		{
+			return;
+		}
+
+		if (localStatus != ResponseStatus::RECEIVED && globalStatus != ResponseStatus::RECEIVED)
+		{
+			player->languageService->PrintChat(true, false, "Course Top Request - Failed (Generic)");
+			return;
+		}
+
+		player->languageService->PrintChat(true, false, "Course Top - Check Console");
+		if (this->localStatus == ResponseStatus::RECEIVED)
+		{
+			this->ReplyLocal();
+		}
+		if (this->globalStatus == ResponseStatus::RECEIVED)
+		{
+			this->ReplyGlobal();
+		}
+	}
+
+	void ReplyGlobal()
+	{
+		BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(userID);
+		CUtlString rank;
+
+		// Overall table
+		CUtlString headers[BHOP_ARRAYSIZE(columnKeysGlobal)];
+		for (u32 i = 0; i < BHOP_ARRAYSIZE(columnKeysGlobal); i++)
+		{
+			headers[i] = player->languageService->PrepareMessage(columnKeysGlobal[i]).c_str();
+		}
+		utils::Table<BHOP_ARRAYSIZE(columnKeysGlobal)> table(
+			player->languageService->PrepareMessage(COURSE_TOP_TABLE_KEY_GLOBAL, mapName.Get(), courseName.Get(), modeName.Get()).c_str(), headers);
+		FOR_EACH_VEC(wrData.overallData, i)
+		{
+			rank.Format("%llu", this->offset + i + 1);
+			RunStats stats = wrData.overallData[i];
+			table.SetRow(i, rank, stats.GetName(), stats.GetTime(), stats.GetSteamID64(), stats.GetPoints(), stats.GetRunID());
+		}
+		player->PrintConsole(false, false, table.GetSeparator("="));
+		player->PrintConsole(false, false, table.GetTitle());
+		player->PrintConsole(false, false, table.GetHeader());
+
+		for (u32 i = 0; i < table.GetNumEntries(); i++)
+		{
+			player->PrintConsole(false, false, table.GetLine(i));
+		}
+		player->PrintConsole(false, false, table.GetSeparator("="));
+	}
+
+	void ReplyLocal()
+	{
+		BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(userID);
+		CUtlString rank;
+
+		// Overall table
+		CUtlString headers[BHOP_ARRAYSIZE(columnKeysLocal)];
+		for (u32 i = 0; i < BHOP_ARRAYSIZE(columnKeysLocal); i++)
+		{
+			headers[i] = player->languageService->PrepareMessage(columnKeysLocal[i]).c_str();
+		}
+		utils::Table<BHOP_ARRAYSIZE(columnKeysLocal)> table(
+			player->languageService->PrepareMessage(COURSE_TOP_TABLE_KEY, mapName.Get(), courseName.Get(), modeName.Get()).c_str(), headers);
+		FOR_EACH_VEC(srData.overallData, i)
+		{
+			rank.Format("%llu", this->offset + i + 1);
+			RunStats stats = srData.overallData[i];
+			table.SetRow(i, rank, stats.GetName(), stats.GetTime(), stats.GetSteamID64(), stats.GetRunID());
+		}
+		player->PrintConsole(false, false, table.GetSeparator("="));
+		player->PrintConsole(false, false, table.GetTitle());
+		player->PrintConsole(false, false, table.GetHeader());
+
+		for (u32 i = 0; i < table.GetNumEntries(); i++)
+		{
+			player->PrintConsole(false, false, table.GetLine(i));
+		}
+		player->PrintConsole(false, false, table.GetSeparator("="));
+	}
+};
+
+SCMD(bhop_ctop, SCFL_RECORD)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	CourseTopRequest::Create<CourseTopRequest>(player, CourseTopRequest::ctopFeatures, true, true, args);
+	return MRES_SUPERCEDE;
+}
+
+SCMD_LINK(bhop_coursetop, bhop_ctop);
+SCMD_LINK(bhop_maptop, bhop_ctop);
+SCMD_LINK(bhop_mtop, bhop_ctop);
+SCMD_LINK(bhop_top, bhop_ctop);
+
+/* TODO: global
+SCMD(bhop_gctop, SCFL_RECORD | SCFL_GLOBAL)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	CourseTopRequest::Create<CourseTopRequest>(player, CourseTopRequest::ctopFeatures, false, true, args);
+	return MRES_SUPERCEDE;
+}
+
+SCMD_LINK(bhop_gcoursetop, bhop_gctop);
+SCMD_LINK(bhop_gmaptop, bhop_gctop);
+
+SCMD(bhop_sctop, SCFL_TIMER)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	CourseTopRequest::Create<CourseTopRequest>(player, CourseTopRequest::ctopFeatures, true, false, args);
+	return MRES_SUPERCEDE;
+}
+
+SCMD_LINK(bhop_scoursetop, bhop_sctop);
+SCMD_LINK(bhop_smaptop, bhop_sctop);
+*/

@@ -1,0 +1,27 @@
+name: Build pushes and pull requests
+
+on:
+  push:
+    branches-ignore:
+      - master
+    tags-ignore:
+      - '**'
+    paths-ignore:
+      - 'translations/**'
+  pull_request:
+    paths-ignore:
+      - 'translations/**'
+
+jobs:
+  build-push:
+    if: ${{ github.event_name == 'push' }}
+    name: Build Push
+    uses: ./.github/workflows/build.yaml
+    with:
+      version: "push"
+  build-pr:
+    if: ${{ github.event_name == 'pull_request' }}
+    name: Build PR
+    uses: ./.github/workflows/build.yaml
+    with:
+      version: "pr"

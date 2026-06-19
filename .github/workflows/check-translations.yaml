@@ -1,0 +1,23 @@
+name: Translations checks
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'translations/**'
+      - 'menu/**'
+      - 'scripts/**'
+  push:
+    paths:
+      - '.github/workflows/**'
+      - 'translations/**'
+      - 'menu/**'
+      - 'scripts/**'
+
+jobs:
+  check-quotes:
+    name: Check quotes in translations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: ./scripts/check-quotes.sh

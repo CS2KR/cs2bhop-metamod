@@ -1,0 +1,176 @@
+#include "bhop.h"
+#include "utils/utils.h"
+#include "../bhop/option/bhop_option.h"
+
+#include "sdk/recipientfilters.h"
+#include "tier0/memdbgon.h"
+
+#define FORMAT_STRING(buffer, addPrefix) \
+	va_list args; \
+	va_start(args, format); \
+	char buffer[512]; \
+	if (addPrefix) \
+	{ \
+		const char *prefix = BhopOptionService::GetOptionStr("chatPrefix", BHOP_DEFAULT_CHAT_PREFIX); \
+		snprintf(buffer, sizeof(buffer), "%s ", prefix); \
+		vsnprintf(buffer + strlen(prefix) + 1, sizeof(buffer) - (strlen(prefix) + 1), format, args); \
+	} \
+	else \
+	{ \
+		vsnprintf(buffer, sizeof(buffer), format, args); \
+	} \
+	va_end(args);
+
+static_function CRecipientFilter *CreateRecipientFilter(BhopPlayer *targetPlayer, bool addSpectators)
+{
+	if (!targetPlayer->GetController())
+	{
+		return nullptr;
+	}
+	CRecipientFilter *filter = new CRecipientFilter();
+	CPlayerSlot slot = targetPlayer->GetPlayerSlot();
+	filter->AddRecipient(slot);
+	if (!addSpectators)
+	{
+		return filter;
+	}
+	if (!targetPlayer->IsAlive())
+	{
+		return filter;
+	}
+	CCSPlayerPawn *targetPlayerPawn = targetPlayer->GetPlayerPawn();
+	if (!targetPlayerPawn)
+	{
+		return nullptr;
+	}
+	for (int i = 0; i < MAXPLAYERS; i++)
+	{
+		BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(i);
+		if (!player || player->IsAlive())
+		{
+			continue;
+		}
+		if (!player->GetController() || !player->GetController()->m_hObserverPawn())
+		{
+			continue;
+		}
+		CPlayer_ObserverServices *obsService = player->GetController()->m_hObserverPawn()->m_pObserverServices;
+		if (!obsService)
+		{
+			continue;
+		}
+		if (obsService->m_hObserverTarget().IsValid() && obsService->m_hObserverTarget().GetEntryIndex() == targetPlayerPawn->GetEntityIndex().Get())
+		{
+			filter->AddRecipient(player->GetPlayerSlot());
+		}
+	}
+	return filter;
+}
+
+void BhopPlayer::PrintConsole(bool addPrefix, bool includeSpectators, const char *format, ...)
+{
+	FORMAT_STRING(buffer, addPrefix);
+	CRecipientFilter *filter = CreateRecipientFilter(this, includeSpectators);
+	if (!filter)
+	{
+		return;
+	}
+	utils::ClientPrintFilter(filter, HUD_PRINTCONSOLE, buffer, "", "", "", "");
+	delete filter;
+}
+
+void BhopPlayer::PrintChat(bool addPrefix, bool includeSpectators, const char *format, ...)
+{
+	FORMAT_STRING(buffer, addPrefix);
+	char coloredBuffer[512];
+	if (!utils::CFormat(coloredBuffer, sizeof(coloredBuffer), buffer))
+	{
+		Warning("utils::CPrintChat did not have enough space to print: %s\n", buffer);
+		return;
+	}
+	CRecipientFilter *filter = CreateRecipientFilter(this, includeSpectators);
+	if (!filter)
+	{
+		return;
+	}
+	utils::ClientPrintFilter(filter, HUD_PRINTTALK, coloredBuffer, "", "", "", "");
+	delete filter;
+}
+
+void BhopPlayer::PrintCentre(bool addPrefix, bool includeSpectators, const char *format, ...)
+{
+	FORMAT_STRING(buffer, addPrefix);
+	CRecipientFilter *filter = CreateRecipientFilter(this, includeSpectators);
+	if (!filter)
+	{
+		return;
+	}
+	utils::ClientPrintFilter(filter, HUD_PRINTCENTER, buffer, "", "", "", "");
+	delete filter;
+}
+
+void BhopPlayer::PrintAlert(bool addPrefix, bool includeSpectators, const char *format, ...)
+{
+	FORMAT_STRING(buffer, addPrefix);
+	CRecipientFilter *filter = CreateRecipientFilter(this, includeSpectators);
+	if (!filter)
+	{
+		return;
+	}
+	utils::ClientPrintFilter(filter, HUD_PRINTALERT, buffer, "", "", "", "");
+	delete filter;
+}
+
+void BhopPlayer::PrintHTMLCentre(bool addPrefix, bool includeSpectators, const char *format, ...)
+{
+	CUtlString buffer;
+	va_list args;
+	va_start(args, format);
+	buffer.FormatV(format, args);
+
+	if (addPrefix)
+	{
+		const char *prefix = BhopOptionService::GetOptionStr("chatPrefix", BHOP_DEFAULT_CHAT_PREFIX);
+		buffer.Format("%s %s", prefix, buffer.Get());
+	}
+
+	if (!includeSpectators)
+	{
+		utils::PrintHTMLCentre(this->GetController(), buffer.Get());
+		return;
+	}
+
+	CRecipientFilter *filter = CreateRecipientFilter(this, includeSpectators);
+	if (!filter)
+	{
+		return;
+	}
+
+	CBasePlayerController *controller = this->GetController();
+	if (!controller)
+	{
+		return;
+	}
+
+	IGameEvent *event = interfaces::pGameEventManager->CreateEvent("show_survival_respawn_status");
+	if (!event)
+	{
+		return;
+	}
+	event->SetString("loc_token", buffer.Get());
+	event->SetInt("duration", 1);
+	event->SetInt("userid", -1);
+
+	auto recipients = filter->GetRecipients();
+	int index = recipients.FindNextSetBit(0);
+
+	while (index > -1)
+	{
+		IGameEventListener2 *listener = g_pBhopUtils->GetLegacyGameEventListener(index);
+		listener->FireGameEvent(event);
+
+		index = recipients.FindNextSetBit(index + 1);
+	}
+	interfaces::pGameEventManager->FreeEvent(event);
+	delete filter;
+}

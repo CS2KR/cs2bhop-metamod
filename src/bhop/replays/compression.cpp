@@ -1,0 +1,1020 @@
+#include "bhop_replay.h"
+#include "compression.h"
+#include "filesystem.h"
+#include "vendor/zstd/lib/zstd.h"
+
+using namespace Bhop::replaysystem::compression;
+
+extern CConVar<bool> bhop_replay_playback_debug;
+
+// ========================================
+// Helper functions
+// ========================================
+
+static_function bool DecodeTickDataBuffer(const char *decompressedData, size_t uncompressedSize, u32 elementCount, u32 replayVersion,
+										  std::vector<TickData> &outTickData);
+
+static_function void AppendToBuffer(std::vector<char> &buffer, const void *data, size_t size)
+{
+	const char *bytes = static_cast<const char *>(data);
+	buffer.insert(buffer.end(), bytes, bytes + size);
+}
+
+static_function bool ReadFromBuffer(const char *&ptr, const char *end, void *dst, size_t size)
+{
+	if (size > static_cast<size_t>(end - ptr))
+	{
+		return false;
+	}
+
+	memcpy(dst, ptr, size);
+	ptr += size;
+	return true;
+}
+
+static_function bool ReadIfFlag(u64 flags, u64 flag, const char *&ptr, const char *end, void *dst, size_t size)
+{
+	return !(flags & flag) || ReadFromBuffer(ptr, end, dst, size);
+}
+
+// ========================================
+// Compression utility functions
+// ========================================
+
+bool Bhop::replaysystem::compression::Compress(const void *src, size_t srcSize, void **outDst, size_t *outDstSize)
+{
+	// Get worst-case compressed size
+	size_t maxCompressedSize = ZSTD_compressBound(srcSize);
+	*outDst = new char[maxCompressedSize];
+	if (!*outDst)
+	{
+		return false;
+	}
+
+	// Compress using zstd level 3
+	size_t compressedSize = ZSTD_compress(*outDst, maxCompressedSize, src, srcSize, 3);
+	if (ZSTD_isError(compressedSize))
+	{
+		delete[] static_cast<char *>(*outDst);
+		*outDst = nullptr;
+		return false;
+	}
+
+	*outDstSize = compressedSize;
+	return true;
+}
+
+bool Bhop::replaysystem::compression::Decompress(const void *src, size_t srcSize, void *dst, size_t dstSize)
+{
+	size_t decompressedSize = ZSTD_decompress(dst, dstSize, src, srcSize);
+	if (ZSTD_isError(decompressedSize))
+	{
+		return false;
+	}
+
+	return decompressedSize == dstSize;
+}
+
+// ========================================
+// Tick data compression
+// ========================================
+
+// Bit flags for which fields have changed
+enum TickDataChangeFlags : u64
+{
+	// Top-level fields (0-9)
+	CHANGED_SERVER_TICK = (1ULL << 0), // Only if difference != 1
+	CHANGED_GAME_TIME = (1ULL << 1),
+	CHANGED_REAL_TIME = (1ULL << 2),
+	CHANGED_UNIX_TIME = (1ULL << 3),
+	CHANGED_CMD_NUMBER = (1ULL << 4),
+	CHANGED_CLIENT_TICK = (1ULL << 5),
+	CHANGED_FORWARD = (1ULL << 6),
+	CHANGED_LEFT = (1ULL << 7),
+	CHANGED_UP = (1ULL << 8),
+	CHANGED_LEFT_HANDED = (1ULL << 9),
+	CHANGED_WEAPON = (1ULL << 39),
+
+	// Pre fields (10-23)
+	CHANGED_PRE_ORIGIN = (1ULL << 10),
+	CHANGED_PRE_VELOCITY = (1ULL << 11),
+	CHANGED_PRE_ANGLES = (1ULL << 12),
+	CHANGED_PRE_BUTTONS_0 = (1ULL << 13),
+	CHANGED_PRE_BUTTONS_1 = (1ULL << 14),
+	CHANGED_PRE_BUTTONS_2 = (1ULL << 15),
+	CHANGED_PRE_JUMP_PRESSED_TIME = (1ULL << 16),
+	CHANGED_PRE_DUCK_SPEED = (1ULL << 17),
+	CHANGED_PRE_DUCK_AMOUNT = (1ULL << 18),
+	CHANGED_PRE_DUCK_OFFSET = (1ULL << 19),
+	CHANGED_PRE_LAST_DUCK_TIME = (1ULL << 20),
+	CHANGED_PRE_REPLAY_FLAGS = (1ULL << 21),
+	CHANGED_PRE_ENTITY_FLAGS = (1ULL << 22),
+	CHANGED_PRE_MOVE_TYPE = (1ULL << 23),
+
+	// Post fields (24-37)
+	CHANGED_POST_ORIGIN = (1ULL << 24),
+	CHANGED_POST_VELOCITY = (1ULL << 25),
+	CHANGED_POST_ANGLES = (1ULL << 26),
+	CHANGED_POST_BUTTONS_0 = (1ULL << 27),
+	CHANGED_POST_BUTTONS_1 = (1ULL << 28),
+	CHANGED_POST_BUTTONS_2 = (1ULL << 29),
+	CHANGED_POST_JUMP_PRESSED_TIME = (1ULL << 30),
+	CHANGED_POST_DUCK_SPEED = (1ULL << 31),
+	CHANGED_POST_DUCK_AMOUNT = (1ULL << 32),
+	CHANGED_POST_DUCK_OFFSET = (1ULL << 33),
+	CHANGED_POST_LAST_DUCK_TIME = (1ULL << 34),
+	CHANGED_POST_REPLAY_FLAGS = (1ULL << 35),
+	CHANGED_POST_ENTITY_FLAGS = (1ULL << 36),
+	CHANGED_POST_MOVE_TYPE = (1ULL << 37),
+
+	CHANGED_CHECKPOINT = (1ULL << 38),
+};
+
+// Compare pre or post data and build change flags
+static_function u64 BuildPreChangeFlags(const TickData::MovementData &current, const TickData::MovementData &previous)
+{
+	u64 flags = 0;
+	// clang-format off
+	if (current.origin != previous.origin) flags |= CHANGED_PRE_ORIGIN;
+	if (current.velocity != previous.velocity) flags |= CHANGED_PRE_VELOCITY;
+	if (current.angles != previous.angles) flags |= CHANGED_PRE_ANGLES;
+	if (current.buttons[0] != previous.buttons[0]) flags |= CHANGED_PRE_BUTTONS_0;
+	if (current.buttons[1] != previous.buttons[1]) flags |= CHANGED_PRE_BUTTONS_1;
+	if (current.buttons[2] != previous.buttons[2]) flags |= CHANGED_PRE_BUTTONS_2;
+	if (current.jumpPressedTime != previous.jumpPressedTime) flags |= CHANGED_PRE_JUMP_PRESSED_TIME;
+	if (current.duckSpeed != previous.duckSpeed) flags |= CHANGED_PRE_DUCK_SPEED;
+	if (current.duckAmount != previous.duckAmount) flags |= CHANGED_PRE_DUCK_AMOUNT;
+	if (current.lastDuckTime != previous.lastDuckTime) flags |= CHANGED_PRE_LAST_DUCK_TIME;
+	if (current.replayFlags.ducking != previous.replayFlags.ducking || 
+		current.replayFlags.ducked != previous.replayFlags.ducked || 
+		current.replayFlags.desiresDuck != previous.replayFlags.desiresDuck) 
+	{
+		flags |= CHANGED_PRE_REPLAY_FLAGS;
+	}
+	if (current.entityFlags != previous.entityFlags) flags |= CHANGED_PRE_ENTITY_FLAGS;
+	if (current.moveType != previous.moveType) flags |= CHANGED_PRE_MOVE_TYPE;
+	// clang-format on
+	return flags;
+}
+
+static_function u64 BuildPostChangeFlags(const TickData::MovementData &current, const TickData::MovementData &previous)
+{
+	u64 flags = 0;
+	// clang-format off
+	if (current.origin != previous.origin) flags |= CHANGED_POST_ORIGIN;
+	if (current.velocity != previous.velocity) flags |= CHANGED_POST_VELOCITY;
+	if (current.angles != previous.angles) flags |= CHANGED_POST_ANGLES;
+	if (current.buttons[0] != previous.buttons[0]) flags |= CHANGED_POST_BUTTONS_0;
+	if (current.buttons[1] != previous.buttons[1]) flags |= CHANGED_POST_BUTTONS_1;
+	if (current.buttons[2] != previous.buttons[2]) flags |= CHANGED_POST_BUTTONS_2;
+	if (current.jumpPressedTime != previous.jumpPressedTime) flags |= CHANGED_POST_JUMP_PRESSED_TIME;
+	if (current.duckSpeed != previous.duckSpeed) flags |= CHANGED_POST_DUCK_SPEED;
+	if (current.duckAmount != previous.duckAmount) flags |= CHANGED_POST_DUCK_AMOUNT;
+	if (current.lastDuckTime != previous.lastDuckTime) flags |= CHANGED_POST_LAST_DUCK_TIME;
+	if (current.replayFlags.ducking != previous.replayFlags.ducking || 
+		current.replayFlags.ducked != previous.replayFlags.ducked || 
+		current.replayFlags.desiresDuck != previous.replayFlags.desiresDuck) 
+	{
+		flags |= CHANGED_POST_REPLAY_FLAGS;
+	}
+	if (current.entityFlags != previous.entityFlags) flags |= CHANGED_POST_ENTITY_FLAGS;
+	if (current.moveType != previous.moveType) flags |= CHANGED_POST_MOVE_TYPE;
+	// clang-format on
+	return flags;
+}
+
+i32 Bhop::replaysystem::compression::WriteTickDataCompressed(std::vector<char> &outBuffer, const std::vector<TickData> &tickData,
+															 const std::vector<SubtickData> &subtickData)
+{
+	i32 bytesWritten = 0;
+	std::vector<char> buffer;
+
+	// Reserve approximate size
+	buffer.reserve(tickData.size() * 120); // Rough estimate
+
+	for (size_t i = 0; i < tickData.size(); i++)
+	{
+		const TickData &current = tickData[i];
+
+		// Determine what to compare against
+		// For tick 0: compare pre with zero, post with pre
+		// For tick N: compare pre with previous post, post with current pre
+		TickData::MovementData prevPre = {};
+		TickData::MovementData prevPost = {};
+
+		if (i == 0)
+		{
+			// First tick: prevPre is zero, prevPost is current.pre
+			prevPost = current.pre;
+		}
+		else
+		{
+			// N-th tick: prevPre is previous.post, prevPost is current.pre
+			prevPre = tickData[i - 1].post;
+			prevPost = current.pre;
+		}
+
+		// Build change flags for top-level fields
+		u64 flags = 0;
+
+		// Server tick: only write if difference is not 1
+		u32 expectedServerTick = (i == 0) ? 0 : tickData[i - 1].serverTick + 1;
+		if (current.serverTick != expectedServerTick)
+		{
+			flags |= CHANGED_SERVER_TICK;
+		}
+		// clang-format off
+		if (i == 0 || current.gameTime != tickData[i - 1].gameTime) flags |= CHANGED_GAME_TIME;
+		if (i == 0 || current.realTime != tickData[i - 1].realTime) flags |= CHANGED_REAL_TIME;
+		if (i == 0 || current.unixTime != tickData[i - 1].unixTime) flags |= CHANGED_UNIX_TIME;
+		if (i == 0 || current.cmdNumber != tickData[i - 1].cmdNumber) flags |= CHANGED_CMD_NUMBER;
+		if (i == 0 || current.clientTick != tickData[i - 1].clientTick) flags |= CHANGED_CLIENT_TICK;
+		if (i == 0 || current.forward != tickData[i - 1].forward) flags |= CHANGED_FORWARD;
+		if (i == 0 || current.left != tickData[i - 1].left) flags |= CHANGED_LEFT;
+		if (i == 0 || current.up != tickData[i - 1].up) flags |= CHANGED_UP;
+		if (i == 0 || current.leftHanded != tickData[i - 1].leftHanded) flags |= CHANGED_LEFT_HANDED;
+		if (i == 0 || current.weapon != tickData[i - 1].weapon) flags |= CHANGED_WEAPON;
+
+		// Build change flags for pre/post
+		flags |= BuildPreChangeFlags(current.pre, prevPre);
+		flags |= BuildPostChangeFlags(current.post, prevPost);
+
+		// Check for checkpoint data changes
+		if (i == 0 || 
+			current.checkpoint.index != tickData[i - 1].checkpoint.index ||
+			current.checkpoint.checkpointCount != tickData[i - 1].checkpoint.checkpointCount ||
+			current.checkpoint.teleportCount != tickData[i - 1].checkpoint.teleportCount)
+		{
+			flags |= CHANGED_CHECKPOINT;
+		}
+		
+		// Write change flags (single u64)
+		AppendToBuffer(buffer, &flags, sizeof(flags));
+		
+		// Write changed top-level fields
+		if (flags & CHANGED_SERVER_TICK) AppendToBuffer(buffer, &current.serverTick, sizeof(current.serverTick));
+		if (flags & CHANGED_GAME_TIME) AppendToBuffer(buffer, &current.gameTime, sizeof(current.gameTime));
+		if (flags & CHANGED_REAL_TIME) AppendToBuffer(buffer, &current.realTime, sizeof(current.realTime));
+		if (flags & CHANGED_UNIX_TIME) AppendToBuffer(buffer, &current.unixTime, sizeof(current.unixTime));
+		if (flags & CHANGED_CMD_NUMBER) AppendToBuffer(buffer, &current.cmdNumber, sizeof(current.cmdNumber));
+		if (flags & CHANGED_CLIENT_TICK) AppendToBuffer(buffer, &current.clientTick, sizeof(current.clientTick));
+		if (flags & CHANGED_FORWARD) AppendToBuffer(buffer, &current.forward, sizeof(current.forward));
+		if (flags & CHANGED_LEFT) AppendToBuffer(buffer, &current.left, sizeof(current.left));
+		if (flags & CHANGED_UP) AppendToBuffer(buffer, &current.up, sizeof(current.up));
+		if (flags & CHANGED_LEFT_HANDED) AppendToBuffer(buffer, &current.leftHanded, sizeof(current.leftHanded));
+		if (flags & CHANGED_WEAPON) AppendToBuffer(buffer, &current.weapon, sizeof(current.weapon));
+		
+		// Write changed pre fields
+		if (flags & CHANGED_PRE_ORIGIN) AppendToBuffer(buffer, &current.pre.origin, sizeof(current.pre.origin));
+		if (flags & CHANGED_PRE_VELOCITY) AppendToBuffer(buffer, &current.pre.velocity, sizeof(current.pre.velocity));
+		if (flags & CHANGED_PRE_ANGLES) AppendToBuffer(buffer, &current.pre.angles, sizeof(current.pre.angles));
+		if (flags & CHANGED_PRE_BUTTONS_0) AppendToBuffer(buffer, &current.pre.buttons[0], sizeof(current.pre.buttons[0]));
+		if (flags & CHANGED_PRE_BUTTONS_1) AppendToBuffer(buffer, &current.pre.buttons[1], sizeof(current.pre.buttons[1]));
+		if (flags & CHANGED_PRE_BUTTONS_2) AppendToBuffer(buffer, &current.pre.buttons[2], sizeof(current.pre.buttons[2]));
+		if (flags & CHANGED_PRE_JUMP_PRESSED_TIME) AppendToBuffer(buffer, &current.pre.jumpPressedTime, sizeof(current.pre.jumpPressedTime));
+		if (flags & CHANGED_PRE_DUCK_SPEED) AppendToBuffer(buffer, &current.pre.duckSpeed, sizeof(current.pre.duckSpeed));
+		if (flags & CHANGED_PRE_DUCK_AMOUNT) AppendToBuffer(buffer, &current.pre.duckAmount, sizeof(current.pre.duckAmount));
+		if (flags & CHANGED_PRE_LAST_DUCK_TIME) AppendToBuffer(buffer, &current.pre.lastDuckTime, sizeof(current.pre.lastDuckTime));
+		if (flags & CHANGED_PRE_REPLAY_FLAGS) AppendToBuffer(buffer, &current.pre.replayFlags, sizeof(current.pre.replayFlags));
+		if (flags & CHANGED_PRE_ENTITY_FLAGS) AppendToBuffer(buffer, &current.pre.entityFlags, sizeof(current.pre.entityFlags));
+		if (flags & CHANGED_PRE_MOVE_TYPE) AppendToBuffer(buffer, &current.pre.moveType, sizeof(current.pre.moveType));
+		
+		// Write changed post fields
+		if (flags & CHANGED_POST_ORIGIN) AppendToBuffer(buffer, &current.post.origin, sizeof(current.post.origin));
+		if (flags & CHANGED_POST_VELOCITY) AppendToBuffer(buffer, &current.post.velocity, sizeof(current.post.velocity));
+		if (flags & CHANGED_POST_ANGLES) AppendToBuffer(buffer, &current.post.angles, sizeof(current.post.angles));
+		if (flags & CHANGED_POST_BUTTONS_0) AppendToBuffer(buffer, &current.post.buttons[0], sizeof(current.post.buttons[0]));
+		if (flags & CHANGED_POST_BUTTONS_1) AppendToBuffer(buffer, &current.post.buttons[1], sizeof(current.post.buttons[1]));
+		if (flags & CHANGED_POST_BUTTONS_2) AppendToBuffer(buffer, &current.post.buttons[2], sizeof(current.post.buttons[2]));
+		if (flags & CHANGED_POST_JUMP_PRESSED_TIME) AppendToBuffer(buffer, &current.post.jumpPressedTime, sizeof(current.post.jumpPressedTime));
+		if (flags & CHANGED_POST_DUCK_SPEED) AppendToBuffer(buffer, &current.post.duckSpeed, sizeof(current.post.duckSpeed));
+		if (flags & CHANGED_POST_DUCK_AMOUNT) AppendToBuffer(buffer, &current.post.duckAmount, sizeof(current.post.duckAmount));
+		if (flags & CHANGED_POST_LAST_DUCK_TIME) AppendToBuffer(buffer, &current.post.lastDuckTime, sizeof(current.post.lastDuckTime));
+		if (flags & CHANGED_POST_REPLAY_FLAGS) AppendToBuffer(buffer, &current.post.replayFlags, sizeof(current.post.replayFlags));
+		if (flags & CHANGED_POST_ENTITY_FLAGS) AppendToBuffer(buffer, &current.post.entityFlags, sizeof(current.post.entityFlags));
+		if (flags & CHANGED_POST_MOVE_TYPE) AppendToBuffer(buffer, &current.post.moveType, sizeof(current.post.moveType));
+
+		// Write checkpoint and cvar data if present
+		if (flags & CHANGED_CHECKPOINT)
+		{
+			AppendToBuffer(buffer, &current.checkpoint.index, sizeof(current.checkpoint.index));
+			AppendToBuffer(buffer, &current.checkpoint.checkpointCount, sizeof(current.checkpoint.checkpointCount));
+			AppendToBuffer(buffer, &current.checkpoint.teleportCount, sizeof(current.checkpoint.teleportCount));
+		}
+		// clang-format on
+	}
+
+	// Compress the buffer
+	void *compressedData = nullptr;
+	size_t compressedSize = 0;
+
+	bool success = Compress(buffer.data(), buffer.size(), &compressedData, &compressedSize);
+	if (!success)
+	{
+		return 0;
+	}
+
+	// Write section header
+	CompressedSectionHeader header;
+	header.compressedSize = (u32)compressedSize;
+	header.uncompressedSize = (u32)buffer.size();
+	header.elementCount = (u32)tickData.size();
+
+	AppendToBuffer(outBuffer, &header, sizeof(header));
+	bytesWritten += (i32)sizeof(header);
+	AppendToBuffer(outBuffer, compressedData, compressedSize);
+	bytesWritten += (i32)compressedSize;
+
+	delete[] static_cast<char *>(compressedData);
+
+	// Compress subtick data
+	void *compressedSubtick = nullptr;
+	size_t compressedSubtickSize = 0;
+	size_t uncompressedSubtickSize = subtickData.size() * sizeof(SubtickData);
+
+	success = Compress(subtickData.data(), uncompressedSubtickSize, &compressedSubtick, &compressedSubtickSize);
+
+	if (success)
+	{
+		CompressedSectionHeader subtickHeader;
+		subtickHeader.compressedSize = (u32)compressedSubtickSize;
+		subtickHeader.uncompressedSize = (u32)uncompressedSubtickSize;
+		subtickHeader.elementCount = (u32)subtickData.size();
+
+		AppendToBuffer(outBuffer, &subtickHeader, sizeof(subtickHeader));
+		bytesWritten += (i32)sizeof(subtickHeader);
+		AppendToBuffer(outBuffer, compressedSubtick, compressedSubtickSize);
+		bytesWritten += (i32)compressedSubtickSize;
+
+		delete[] static_cast<char *>(compressedSubtick);
+	}
+
+	return bytesWritten;
+}
+
+bool Bhop::replaysystem::compression::ReadTickDataCompressed(const char *&cursor, const char *end, std::vector<TickData> &outTickData,
+															 std::vector<SubtickData> &outSubtickData, u32 replayVersion)
+{
+	if (cursor + (ptrdiff_t)sizeof(CompressedSectionHeader) > end)
+	{
+		return false;
+	}
+	CompressedSectionHeader header;
+	memcpy(&header, cursor, sizeof(header));
+	cursor += sizeof(header);
+
+	if (cursor + (ptrdiff_t)header.compressedSize > end)
+	{
+		return false;
+	}
+
+	char *decompressedData = new char[header.uncompressedSize];
+	if (!decompressedData)
+	{
+		return false;
+	}
+
+	// Decompress
+	bool success = Decompress(cursor, header.compressedSize, decompressedData, header.uncompressedSize);
+	cursor += header.compressedSize;
+	if (!success)
+	{
+		delete[] decompressedData;
+		return false;
+	}
+
+	// Reconstruct tick data from delta-encoded buffer
+	bool decoded = DecodeTickDataBuffer(decompressedData, header.uncompressedSize, header.elementCount, replayVersion, outTickData);
+
+	delete[] decompressedData;
+	if (!decoded)
+	{
+		return false;
+	}
+
+	// Read subtick data
+	if (cursor + (ptrdiff_t)sizeof(CompressedSectionHeader) > end)
+	{
+		return false;
+	}
+
+	CompressedSectionHeader subtickHeader;
+	memcpy(&subtickHeader, cursor, sizeof(subtickHeader));
+	cursor += sizeof(subtickHeader);
+
+	if (cursor + (ptrdiff_t)subtickHeader.compressedSize > end)
+	{
+		return false;
+	}
+
+	// v2+ uses subtickMoves[MAX_SUBTICK_MOVES]; older replays used subtickMoves[64].
+	if (replayVersion >= 2)
+	{
+		outSubtickData.resize(subtickHeader.elementCount);
+		success = Decompress(cursor, subtickHeader.compressedSize, outSubtickData.data(), subtickHeader.uncompressedSize);
+	}
+	else
+	{
+		char *tempBuf = new char[subtickHeader.uncompressedSize];
+		success = Decompress(cursor, subtickHeader.compressedSize, tempBuf, subtickHeader.uncompressedSize);
+		if (success)
+		{
+			size_t oldEntrySize = subtickHeader.uncompressedSize / subtickHeader.elementCount;
+			outSubtickData.resize(subtickHeader.elementCount);
+			for (u32 i = 0; i < subtickHeader.elementCount; i++)
+			{
+				const char *entry = tempBuf + i * oldEntrySize;
+				memcpy(&outSubtickData[i], entry, MIN(oldEntrySize, sizeof(SubtickData)));
+				if (outSubtickData[i].numSubtickMoves > MAX_SUBTICK_MOVES)
+				{
+					outSubtickData[i].numSubtickMoves = MAX_SUBTICK_MOVES;
+				}
+			}
+		}
+		delete[] tempBuf;
+	}
+	cursor += subtickHeader.compressedSize;
+	return success;
+}
+
+static_function bool DecodeTickDataBuffer(const char *decompressedData, size_t uncompressedSize, u32 elementCount, u32 replayVersion,
+										  std::vector<TickData> &outTickData)
+{
+	outTickData.clear();
+	outTickData.resize(elementCount);
+
+	const u64 weaponFlag = (1ULL << 39);
+
+	const char *readPtr = decompressedData;
+	const char *endPtr = decompressedData + uncompressedSize;
+
+	for (u32 i = 0; i < elementCount; i++)
+	{
+		TickData &current = outTickData[i];
+
+		// Read change flags
+		u64 flags = 0;
+		if (!ReadFromBuffer(readPtr, endPtr, &flags, sizeof(flags)))
+		{
+			return false;
+		}
+
+		// Copy from previous tick if not changed (or apply expected increment)
+		// clang-format off
+		if (i > 0)
+		{
+			// Server tick is expected to increment by 1
+			if (!(flags & CHANGED_SERVER_TICK)) current.serverTick = outTickData[i - 1].serverTick + 1;
+			if (!(flags & CHANGED_GAME_TIME)) current.gameTime = outTickData[i - 1].gameTime;
+			if (!(flags & CHANGED_REAL_TIME)) current.realTime = outTickData[i - 1].realTime;
+			if (!(flags & CHANGED_UNIX_TIME)) current.unixTime = outTickData[i - 1].unixTime;
+			if (!(flags & CHANGED_CMD_NUMBER)) current.cmdNumber = outTickData[i - 1].cmdNumber;
+			if (!(flags & CHANGED_CLIENT_TICK)) current.clientTick = outTickData[i - 1].clientTick;
+			if (!(flags & CHANGED_FORWARD)) current.forward = outTickData[i - 1].forward;
+			if (!(flags & CHANGED_LEFT)) current.left = outTickData[i - 1].left;
+			if (!(flags & CHANGED_UP)) current.up = outTickData[i - 1].up;
+			if (!(flags & CHANGED_LEFT_HANDED)) current.leftHanded = outTickData[i - 1].leftHanded;
+			if (!(flags & weaponFlag)) current.weapon = outTickData[i - 1].weapon;
+		}
+
+		// Read changed fields
+				if (!ReadIfFlag(flags, CHANGED_SERVER_TICK, readPtr, endPtr, &current.serverTick, sizeof(current.serverTick))) return false;
+		if (!ReadIfFlag(flags, CHANGED_GAME_TIME, readPtr, endPtr, &current.gameTime, sizeof(current.gameTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_REAL_TIME, readPtr, endPtr, &current.realTime, sizeof(current.realTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_UNIX_TIME, readPtr, endPtr, &current.unixTime, sizeof(current.unixTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_CMD_NUMBER, readPtr, endPtr, &current.cmdNumber, sizeof(current.cmdNumber))) return false;
+		if (!ReadIfFlag(flags, CHANGED_CLIENT_TICK, readPtr, endPtr, &current.clientTick, sizeof(current.clientTick))) return false;
+		if (!ReadIfFlag(flags, CHANGED_FORWARD, readPtr, endPtr, &current.forward, sizeof(current.forward))) return false;
+		if (!ReadIfFlag(flags, CHANGED_LEFT, readPtr, endPtr, &current.left, sizeof(current.left))) return false;
+		if (!ReadIfFlag(flags, CHANGED_UP, readPtr, endPtr, &current.up, sizeof(current.up))) return false;
+		if (!ReadIfFlag(flags, CHANGED_LEFT_HANDED, readPtr, endPtr, &current.leftHanded, sizeof(current.leftHanded))) return false;
+		if (!ReadIfFlag(flags, weaponFlag, readPtr, endPtr, &current.weapon, sizeof(current.weapon))) return false;
+
+		// Reconstruct pre data
+		// For tick 0: compare with zero
+		// For tick N: compare with previous.post
+		TickData::MovementData prevPre = {};
+		if (i > 0)
+		{
+			prevPre = outTickData[i - 1].post;
+		}
+		
+		// Copy from previous or read changed
+		current.pre = prevPre;
+		if (!ReadIfFlag(flags, CHANGED_PRE_ORIGIN, readPtr, endPtr, &current.pre.origin, sizeof(current.pre.origin))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_VELOCITY, readPtr, endPtr, &current.pre.velocity, sizeof(current.pre.velocity))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_ANGLES, readPtr, endPtr, &current.pre.angles, sizeof(current.pre.angles))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_BUTTONS_0, readPtr, endPtr, &current.pre.buttons[0], sizeof(current.pre.buttons[0]))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_BUTTONS_1, readPtr, endPtr, &current.pre.buttons[1], sizeof(current.pre.buttons[1]))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_BUTTONS_2, readPtr, endPtr, &current.pre.buttons[2], sizeof(current.pre.buttons[2]))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_JUMP_PRESSED_TIME, readPtr, endPtr, &current.pre.jumpPressedTime, sizeof(current.pre.jumpPressedTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_DUCK_SPEED, readPtr, endPtr, &current.pre.duckSpeed, sizeof(current.pre.duckSpeed))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_DUCK_AMOUNT, readPtr, endPtr, &current.pre.duckAmount, sizeof(current.pre.duckAmount))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_LAST_DUCK_TIME, readPtr, endPtr, &current.pre.lastDuckTime, sizeof(current.pre.lastDuckTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_REPLAY_FLAGS, readPtr, endPtr, &current.pre.replayFlags, sizeof(current.pre.replayFlags))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_ENTITY_FLAGS, readPtr, endPtr, &current.pre.entityFlags, sizeof(current.pre.entityFlags))) return false;
+		if (!ReadIfFlag(flags, CHANGED_PRE_MOVE_TYPE, readPtr, endPtr, &current.pre.moveType, sizeof(current.pre.moveType))) return false;
+		
+		// Reconstruct post data (compare with current.pre)
+		current.post = current.pre;
+		if (!ReadIfFlag(flags, CHANGED_POST_ORIGIN, readPtr, endPtr, &current.post.origin, sizeof(current.post.origin))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_VELOCITY, readPtr, endPtr, &current.post.velocity, sizeof(current.post.velocity))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_ANGLES, readPtr, endPtr, &current.post.angles, sizeof(current.post.angles))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_BUTTONS_0, readPtr, endPtr, &current.post.buttons[0], sizeof(current.post.buttons[0]))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_BUTTONS_1, readPtr, endPtr, &current.post.buttons[1], sizeof(current.post.buttons[1]))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_BUTTONS_2, readPtr, endPtr, &current.post.buttons[2], sizeof(current.post.buttons[2]))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_JUMP_PRESSED_TIME, readPtr, endPtr, &current.post.jumpPressedTime, sizeof(current.post.jumpPressedTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_DUCK_SPEED, readPtr, endPtr, &current.post.duckSpeed, sizeof(current.post.duckSpeed))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_DUCK_AMOUNT, readPtr, endPtr, &current.post.duckAmount, sizeof(current.post.duckAmount))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_LAST_DUCK_TIME, readPtr, endPtr, &current.post.lastDuckTime, sizeof(current.post.lastDuckTime))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_REPLAY_FLAGS, readPtr, endPtr, &current.post.replayFlags, sizeof(current.post.replayFlags))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_ENTITY_FLAGS, readPtr, endPtr, &current.post.entityFlags, sizeof(current.post.entityFlags))) return false;
+		if (!ReadIfFlag(flags, CHANGED_POST_MOVE_TYPE, readPtr, endPtr, &current.post.moveType, sizeof(current.post.moveType))) return false;
+
+		// Reconstruct checkpoint data (compare with previous)
+		if (i > 0)
+		{
+			current.checkpoint = outTickData[i - 1].checkpoint;
+		}
+		else
+		{
+			current.checkpoint = {};
+		}
+		if (flags & CHANGED_CHECKPOINT)
+		{
+			if (!ReadFromBuffer(readPtr, endPtr, &current.checkpoint.index, sizeof(current.checkpoint.index))) return false;
+			if (!ReadFromBuffer(readPtr, endPtr, &current.checkpoint.checkpointCount, sizeof(current.checkpoint.checkpointCount))) return false;
+			if (!ReadFromBuffer(readPtr, endPtr, &current.checkpoint.teleportCount, sizeof(current.checkpoint.teleportCount))) return false;
+		}
+	}
+	// clang-format on
+	return readPtr == endPtr;
+}
+
+bool Bhop::replaysystem::compression::ReadWeaponsCompressed(const char *&cursor, const char *end,
+															std::vector<std::pair<i32, EconInfo>> &outWeaponTable)
+{
+	if (cursor + (ptrdiff_t)sizeof(CompressedSectionHeader) > end)
+	{
+		return false;
+	}
+	CompressedSectionHeader header;
+	memcpy(&header, cursor, sizeof(header));
+	cursor += sizeof(header);
+
+	if (cursor + (ptrdiff_t)header.compressedSize > end)
+	{
+		return false;
+	}
+
+	char *decompressedData = new char[header.uncompressedSize];
+	if (!decompressedData)
+	{
+		return false;
+	}
+
+	// Decompress
+	bool success = Decompress(cursor, header.compressedSize, decompressedData, header.uncompressedSize);
+	cursor += header.compressedSize;
+	if (!success)
+	{
+		delete[] decompressedData;
+		return false;
+	}
+
+	// Deserialize weapon table from buffer
+	outWeaponTable.clear();
+	outWeaponTable.reserve(header.elementCount);
+
+	const char *readPtr = decompressedData;
+
+	for (u32 i = 0; i < header.elementCount; i++)
+	{
+		i32 weaponID;
+		EconInfo econInfo;
+
+		memcpy(&weaponID, readPtr, sizeof(weaponID));
+		readPtr += sizeof(weaponID);
+
+		memcpy(&econInfo.mainInfo, readPtr, sizeof(econInfo.mainInfo));
+		readPtr += sizeof(econInfo.mainInfo);
+
+		for (i32 j = 0; j < econInfo.mainInfo.numAttributes; j++)
+		{
+			memcpy(&econInfo.attributes[j], readPtr, sizeof(EconInfo::attributes[0]));
+			readPtr += sizeof(EconInfo::attributes[0]);
+		}
+		META_CONPRINTF("Read weapon ID %d with %d attributes\n", weaponID, econInfo.mainInfo.numAttributes);
+		outWeaponTable.emplace_back(weaponID, econInfo);
+	}
+
+	delete[] decompressedData;
+	return true;
+}
+
+// ========================================
+// Events compression
+// ========================================
+
+bool Bhop::replaysystem::compression::ReadEventsCompressed(const char *&cursor, const char *end, std::vector<RpEvent> &outEvents)
+{
+	if (cursor + (ptrdiff_t)sizeof(CompressedSectionHeader) > end)
+	{
+		return false;
+	}
+	// Read section header
+	CompressedSectionHeader header;
+	memcpy(&header, cursor, sizeof(header));
+	cursor += sizeof(header);
+
+	if (cursor + (ptrdiff_t)header.compressedSize > end)
+	{
+		return false;
+	}
+
+	// Resize output vector
+	outEvents.resize(header.elementCount);
+	bool success = Decompress(cursor, header.compressedSize, outEvents.data(), header.uncompressedSize);
+	cursor += header.compressedSize;
+	return success;
+}
+
+i32 Bhop::replaysystem::compression::WriteEventsCompressed(std::vector<char> &outBuffer, const std::vector<RpEvent> &events)
+{
+	i32 bytesWritten = 0;
+
+	void *compressedData = nullptr;
+	size_t compressedSize = 0;
+	size_t uncompressedSize = events.size() * sizeof(RpEvent);
+
+	bool success = Compress(events.data(), uncompressedSize, &compressedData, &compressedSize);
+	if (!success)
+	{
+		return 0;
+	}
+
+	CompressedSectionHeader header;
+	header.compressedSize = (u32)compressedSize;
+	header.uncompressedSize = (u32)uncompressedSize;
+	header.elementCount = (u32)events.size();
+
+	AppendToBuffer(outBuffer, &header, sizeof(header));
+	bytesWritten += (i32)sizeof(header);
+	AppendToBuffer(outBuffer, compressedData, compressedSize);
+	bytesWritten += (i32)compressedSize;
+
+	delete[] static_cast<char *>(compressedData);
+
+	return bytesWritten;
+}
+
+// ========================================
+// CmdData compression
+// ========================================
+
+// Bit flags for which CmdData fields have changed
+enum CmdDataChangeFlags : u64
+{
+	CHANGED_CMD_SERVER_TICK = (1ULL << 0), // Only if difference != 1
+	CHANGED_CMD_GAME_TIME = (1ULL << 1),
+	CHANGED_CMD_REAL_TIME = (1ULL << 2),
+	CHANGED_CMD_UNIX_TIME = (1ULL << 3),
+	CHANGED_CMD_FRAMERATE = (1ULL << 4),
+	CHANGED_CMD_LATENCY = (1ULL << 5),
+	CHANGED_CMD_AVG_LOSS = (1ULL << 6),
+	CHANGED_CMD_CMD_NUMBER = (1ULL << 7),
+	CHANGED_CMD_CLIENT_TICK = (1ULL << 8),
+	CHANGED_CMD_FORWARD = (1ULL << 9),
+	CHANGED_CMD_LEFT = (1ULL << 10),
+	CHANGED_CMD_UP = (1ULL << 11),
+	CHANGED_CMD_BUTTONS_0 = (1ULL << 12),
+	CHANGED_CMD_BUTTONS_1 = (1ULL << 13),
+	CHANGED_CMD_BUTTONS_2 = (1ULL << 14),
+	CHANGED_CMD_ANGLES = (1ULL << 15),
+	CHANGED_CMD_MOUSEDX = (1ULL << 16),
+	CHANGED_CMD_MOUSEDY = (1ULL << 17),
+	CHANGED_CMD_SENSITIVITY = (1ULL << 18),
+	CHANGED_CMD_M_YAW = (1ULL << 19),
+	CHANGED_CMD_M_PITCH = (1ULL << 20),
+};
+
+bool Bhop::replaysystem::compression::ReadCmdDataCompressed(const char *&cursor, const char *end, std::vector<CmdData> &outCmdData,
+															std::vector<SubtickData> &outCmdSubtickData, u32 replayVersion)
+{
+	if (cursor + (ptrdiff_t)sizeof(CompressedSectionHeader) > end)
+	{
+		return false;
+	}
+	CompressedSectionHeader header;
+	memcpy(&header, cursor, sizeof(header));
+	cursor += sizeof(header);
+
+	if (cursor + (ptrdiff_t)header.compressedSize > end)
+	{
+		return false;
+	}
+
+	// Allocate buffer for decompressed data
+	char *decompressedData = new char[header.uncompressedSize];
+	if (!decompressedData)
+	{
+		return false;
+	}
+
+	// Decompress
+	bool success = Decompress(cursor, header.compressedSize, decompressedData, header.uncompressedSize);
+	cursor += header.compressedSize;
+
+	if (!success)
+	{
+		delete[] decompressedData;
+		return false;
+	}
+
+	// Reconstruct cmd data from delta-encoded buffer
+	outCmdData.resize(header.elementCount);
+	const char *readPtr = decompressedData;
+
+	for (u32 i = 0; i < header.elementCount; i++)
+	{
+		CmdData &current = outCmdData[i];
+
+		// Read change flags
+		u64 flags;
+		memcpy(&flags, readPtr, sizeof(flags));
+		readPtr += sizeof(flags);
+
+		// Copy from previous if not changed (or apply expected increment)
+		if (i > 0)
+		{
+			// clang-format off
+			// Server tick is expected to increment by 1
+			if (!(flags & CHANGED_CMD_SERVER_TICK)) current.serverTick = outCmdData[i - 1].serverTick + 1;
+			// gameTime is expected to increment by 1/64 (0.015625)
+			if (!(flags & CHANGED_CMD_GAME_TIME)) current.gameTime = outCmdData[i - 1].gameTime + ENGINE_FIXED_TICK_INTERVAL;
+			if (!(flags & CHANGED_CMD_REAL_TIME)) current.realTime = outCmdData[i - 1].realTime;
+			if (!(flags & CHANGED_CMD_UNIX_TIME)) current.unixTime = outCmdData[i - 1].unixTime;
+			if (!(flags & CHANGED_CMD_FRAMERATE)) current.framerate = outCmdData[i - 1].framerate;
+			if (!(flags & CHANGED_CMD_LATENCY)) current.latency = outCmdData[i - 1].latency;
+			if (!(flags & CHANGED_CMD_AVG_LOSS)) current.avgLoss = outCmdData[i - 1].avgLoss;
+			if (!(flags & CHANGED_CMD_CMD_NUMBER)) current.cmdNumber = outCmdData[i - 1].cmdNumber;
+			if (!(flags & CHANGED_CMD_CLIENT_TICK)) current.clientTick = outCmdData[i - 1].clientTick;
+			if (!(flags & CHANGED_CMD_FORWARD)) current.forward = outCmdData[i - 1].forward;
+			if (!(flags & CHANGED_CMD_LEFT)) current.left = outCmdData[i - 1].left;
+			if (!(flags & CHANGED_CMD_UP)) current.up = outCmdData[i - 1].up;
+			if (!(flags & CHANGED_CMD_BUTTONS_0)) current.buttons[0] = outCmdData[i - 1].buttons[0];
+			if (!(flags & CHANGED_CMD_BUTTONS_1)) current.buttons[1] = outCmdData[i - 1].buttons[1];
+			if (!(flags & CHANGED_CMD_BUTTONS_2)) current.buttons[2] = outCmdData[i - 1].buttons[2];
+			if (!(flags & CHANGED_CMD_ANGLES)) current.angles = outCmdData[i - 1].angles;
+			if (!(flags & CHANGED_CMD_MOUSEDX)) current.mousedx = outCmdData[i - 1].mousedx;
+			if (!(flags & CHANGED_CMD_MOUSEDY)) current.mousedy = outCmdData[i - 1].mousedy;
+			if (!(flags & CHANGED_CMD_SENSITIVITY)) current.sensitivity = outCmdData[i - 1].sensitivity;
+			if (!(flags & CHANGED_CMD_M_YAW)) current.m_yaw = outCmdData[i - 1].m_yaw;
+			if (!(flags & CHANGED_CMD_M_PITCH)) current.m_pitch = outCmdData[i - 1].m_pitch;
+			// clang-format on
+		}
+
+		// Read changed fields
+		// clang-format off
+		if (flags & CHANGED_CMD_SERVER_TICK) { memcpy(&current.serverTick, readPtr, sizeof(current.serverTick)); readPtr += sizeof(current.serverTick); }
+		if (flags & CHANGED_CMD_GAME_TIME) { memcpy(&current.gameTime, readPtr, sizeof(current.gameTime)); readPtr += sizeof(current.gameTime); }
+		if (flags & CHANGED_CMD_REAL_TIME) { memcpy(&current.realTime, readPtr, sizeof(current.realTime)); readPtr += sizeof(current.realTime); }
+		if (flags & CHANGED_CMD_UNIX_TIME) { memcpy(&current.unixTime, readPtr, sizeof(current.unixTime)); readPtr += sizeof(current.unixTime); }
+		if (flags & CHANGED_CMD_FRAMERATE) { memcpy(&current.framerate, readPtr, sizeof(current.framerate)); readPtr += sizeof(current.framerate); }
+		if (flags & CHANGED_CMD_LATENCY) { memcpy(&current.latency, readPtr, sizeof(current.latency)); readPtr += sizeof(current.latency); }
+		if (flags & CHANGED_CMD_AVG_LOSS) { memcpy(&current.avgLoss, readPtr, sizeof(current.avgLoss)); readPtr += sizeof(current.avgLoss); }
+		if (flags & CHANGED_CMD_CMD_NUMBER) { memcpy(&current.cmdNumber, readPtr, sizeof(current.cmdNumber)); readPtr += sizeof(current.cmdNumber); }
+		if (flags & CHANGED_CMD_CLIENT_TICK) { memcpy(&current.clientTick, readPtr, sizeof(current.clientTick)); readPtr += sizeof(current.clientTick); }
+		if (flags & CHANGED_CMD_FORWARD) { memcpy(&current.forward, readPtr, sizeof(current.forward)); readPtr += sizeof(current.forward); }
+		if (flags & CHANGED_CMD_LEFT) { memcpy(&current.left, readPtr, sizeof(current.left)); readPtr += sizeof(current.left); }
+		if (flags & CHANGED_CMD_UP) { memcpy(&current.up, readPtr, sizeof(current.up)); readPtr += sizeof(current.up); }
+		if (flags & CHANGED_CMD_BUTTONS_0) { memcpy(&current.buttons[0], readPtr, sizeof(current.buttons[0])); readPtr += sizeof(current.buttons[0]); }
+		if (flags & CHANGED_CMD_BUTTONS_1) { memcpy(&current.buttons[1], readPtr, sizeof(current.buttons[1])); readPtr += sizeof(current.buttons[1]); }
+		if (flags & CHANGED_CMD_BUTTONS_2) { memcpy(&current.buttons[2], readPtr, sizeof(current.buttons[2])); readPtr += sizeof(current.buttons[2]); }
+		if (flags & CHANGED_CMD_ANGLES) { memcpy(&current.angles, readPtr, sizeof(current.angles)); readPtr += sizeof(current.angles); }
+		if (flags & CHANGED_CMD_MOUSEDX) { memcpy(&current.mousedx, readPtr, sizeof(current.mousedx)); readPtr += sizeof(current.mousedx); }
+		if (flags & CHANGED_CMD_MOUSEDY) { memcpy(&current.mousedy, readPtr, sizeof(current.mousedy)); readPtr += sizeof(current.mousedy); }
+		if (flags & CHANGED_CMD_SENSITIVITY) { memcpy(&current.sensitivity, readPtr, sizeof(current.sensitivity)); readPtr += sizeof(current.sensitivity); }
+		if (flags & CHANGED_CMD_M_YAW) { memcpy(&current.m_yaw, readPtr, sizeof(current.m_yaw)); readPtr += sizeof(current.m_yaw); }
+		if (flags & CHANGED_CMD_M_PITCH) { memcpy(&current.m_pitch, readPtr, sizeof(current.m_pitch)); readPtr += sizeof(current.m_pitch); }
+		// clang-format on
+	}
+
+	delete[] decompressedData;
+
+	// Cmd subtick section
+	if (cursor + (ptrdiff_t)sizeof(CompressedSectionHeader) > end)
+	{
+		return false;
+	}
+	CompressedSectionHeader subtickHeader;
+	memcpy(&subtickHeader, cursor, sizeof(subtickHeader));
+	cursor += sizeof(subtickHeader);
+
+	if (cursor + (ptrdiff_t)subtickHeader.compressedSize > end)
+	{
+		return false;
+	}
+
+	// v2+ uses subtickMoves[MAX_SUBTICK_MOVES]; older replays used subtickMoves[64].
+	if (replayVersion >= 2)
+	{
+		outCmdSubtickData.resize(subtickHeader.elementCount);
+		success = Decompress(cursor, subtickHeader.compressedSize, outCmdSubtickData.data(), subtickHeader.uncompressedSize);
+	}
+	else
+	{
+		char *tempBuf = new char[subtickHeader.uncompressedSize];
+		success = Decompress(cursor, subtickHeader.compressedSize, tempBuf, subtickHeader.uncompressedSize);
+		if (success)
+		{
+			size_t oldEntrySize = subtickHeader.uncompressedSize / subtickHeader.elementCount;
+			outCmdSubtickData.resize(subtickHeader.elementCount);
+			for (u32 i = 0; i < subtickHeader.elementCount; i++)
+			{
+				const char *entry = tempBuf + i * oldEntrySize;
+				memcpy(&outCmdSubtickData[i], entry, MIN(oldEntrySize, sizeof(SubtickData)));
+				if (outCmdSubtickData[i].numSubtickMoves > MAX_SUBTICK_MOVES)
+				{
+					outCmdSubtickData[i].numSubtickMoves = MAX_SUBTICK_MOVES;
+				}
+			}
+		}
+		delete[] tempBuf;
+	}
+
+	cursor += subtickHeader.compressedSize;
+	return success;
+}
+
+i32 Bhop::replaysystem::compression::WriteWeaponsCompressed(std::vector<char> &outBuffer, const std::vector<std::pair<i32, EconInfo>> &weaponTable)
+{
+	i32 bytesWritten = 0;
+
+	// Serialize weapon table to a buffer first
+	std::vector<char> buffer;
+
+	// Reserve approximate size
+	size_t approxSize = 0;
+	for (const auto &weaponPair : weaponTable)
+	{
+		approxSize += sizeof(weaponPair.first); // weapon index
+		approxSize += sizeof(weaponPair.second.mainInfo);
+		approxSize += weaponPair.second.mainInfo.numAttributes * sizeof(weaponPair.second.attributes[0]);
+	}
+	buffer.reserve(approxSize);
+
+	// Serialize to buffer (no need to write numWeapons since header.elementCount contains it)
+	for (const auto &weaponPair : weaponTable)
+	{
+		AppendToBuffer(buffer, &weaponPair.first, sizeof(weaponPair.first)); // weapon index
+		AppendToBuffer(buffer, &weaponPair.second.mainInfo, sizeof(weaponPair.second.mainInfo));
+		for (i32 j = 0; j < weaponPair.second.mainInfo.numAttributes; j++)
+		{
+			AppendToBuffer(buffer, &weaponPair.second.attributes[j], sizeof(weaponPair.second.attributes[j]));
+		}
+	}
+
+	// Compress
+	void *compressedData = nullptr;
+	size_t compressedSize = 0;
+
+	bool success = Compress(buffer.data(), buffer.size(), &compressedData, &compressedSize);
+	if (!success)
+	{
+		return 0;
+	}
+
+	// Write header and compressed data
+	CompressedSectionHeader header;
+	header.compressedSize = (u32)compressedSize;
+	header.uncompressedSize = (u32)buffer.size();
+	header.elementCount = (u32)weaponTable.size();
+
+	AppendToBuffer(outBuffer, &header, sizeof(header));
+	bytesWritten += (i32)sizeof(header);
+	AppendToBuffer(outBuffer, compressedData, compressedSize);
+	bytesWritten += (i32)compressedSize;
+
+	delete[] static_cast<char *>(compressedData);
+
+	return bytesWritten;
+}
+
+i32 Bhop::replaysystem::compression::WriteCmdDataCompressed(std::vector<char> &outBuffer, const std::vector<CmdData> &cmdData,
+															const std::vector<SubtickData> &cmdSubtickData)
+{
+	i32 bytesWritten = 0;
+	std::vector<char> buffer;
+
+	// Reserve approximate size
+	buffer.reserve(cmdData.size() * 120); // Rough estimate
+
+	for (size_t i = 0; i < cmdData.size(); i++)
+	{
+		const CmdData &current = cmdData[i];
+
+		// Build change flags
+		u64 flags = 0;
+
+		// clang-format off
+		// Server tick: only write if difference is not 1
+		u32 expectedServerTick = (i == 0) ? 0 : cmdData[i - 1].serverTick + 1;
+		if (current.serverTick != expectedServerTick) flags |= CHANGED_CMD_SERVER_TICK;
+		// gameTime is expected to increment by 1/64 (0.015625)
+		f32 expectedGameTime = (i == 0) ? 0.0f : cmdData[i - 1].gameTime + ENGINE_FIXED_TICK_INTERVAL;
+		if (current.gameTime != expectedGameTime) flags |= CHANGED_CMD_GAME_TIME;
+		if (i == 0 || current.realTime != cmdData[i - 1].realTime) flags |= CHANGED_CMD_REAL_TIME;
+		if (i == 0 || current.unixTime != cmdData[i - 1].unixTime) flags |= CHANGED_CMD_UNIX_TIME;
+		if (i == 0 || current.framerate != cmdData[i - 1].framerate) flags |= CHANGED_CMD_FRAMERATE;
+		if (i == 0 || current.latency != cmdData[i - 1].latency) flags |= CHANGED_CMD_LATENCY;
+		if (i == 0 || current.avgLoss != cmdData[i - 1].avgLoss) flags |= CHANGED_CMD_AVG_LOSS;
+		if (i == 0 || current.cmdNumber != cmdData[i - 1].cmdNumber) flags |= CHANGED_CMD_CMD_NUMBER;
+		if (i == 0 || current.clientTick != cmdData[i - 1].clientTick) flags |= CHANGED_CMD_CLIENT_TICK;
+		if (i == 0 || current.forward != cmdData[i - 1].forward) flags |= CHANGED_CMD_FORWARD;
+		if (i == 0 || current.left != cmdData[i - 1].left) flags |= CHANGED_CMD_LEFT;
+		if (i == 0 || current.up != cmdData[i - 1].up) flags |= CHANGED_CMD_UP;
+		if (i == 0 || current.buttons[0] != cmdData[i - 1].buttons[0]) flags |= CHANGED_CMD_BUTTONS_0;
+		if (i == 0 || current.buttons[1] != cmdData[i - 1].buttons[1]) flags |= CHANGED_CMD_BUTTONS_1;
+		if (i == 0 || current.buttons[2] != cmdData[i - 1].buttons[2]) flags |= CHANGED_CMD_BUTTONS_2;
+		if (i == 0 || current.angles != cmdData[i - 1].angles) flags |= CHANGED_CMD_ANGLES;
+		if (i == 0 || current.mousedx != cmdData[i - 1].mousedx) flags |= CHANGED_CMD_MOUSEDX;
+		if (i == 0 || current.mousedy != cmdData[i - 1].mousedy) flags |= CHANGED_CMD_MOUSEDY;
+		if (i == 0 || current.sensitivity != cmdData[i - 1].sensitivity) flags |= CHANGED_CMD_SENSITIVITY;
+		if (i == 0 || current.m_yaw != cmdData[i - 1].m_yaw) flags |= CHANGED_CMD_M_YAW;
+		if (i == 0 || current.m_pitch != cmdData[i - 1].m_pitch) flags |= CHANGED_CMD_M_PITCH;
+
+		// Write change flags
+		AppendToBuffer(buffer, &flags, sizeof(flags));
+
+		// Write changed fields
+		if (flags & CHANGED_CMD_SERVER_TICK) AppendToBuffer(buffer, &current.serverTick, sizeof(current.serverTick));
+		if (flags & CHANGED_CMD_GAME_TIME) AppendToBuffer(buffer, &current.gameTime, sizeof(current.gameTime));
+		if (flags & CHANGED_CMD_REAL_TIME) AppendToBuffer(buffer, &current.realTime, sizeof(current.realTime));
+		if (flags & CHANGED_CMD_UNIX_TIME) AppendToBuffer(buffer, &current.unixTime, sizeof(current.unixTime));
+		if (flags & CHANGED_CMD_FRAMERATE) AppendToBuffer(buffer, &current.framerate, sizeof(current.framerate));
+		if (flags & CHANGED_CMD_LATENCY) AppendToBuffer(buffer, &current.latency, sizeof(current.latency));
+		if (flags & CHANGED_CMD_AVG_LOSS) AppendToBuffer(buffer, &current.avgLoss, sizeof(current.avgLoss));
+		if (flags & CHANGED_CMD_CMD_NUMBER) AppendToBuffer(buffer, &current.cmdNumber, sizeof(current.cmdNumber));
+		if (flags & CHANGED_CMD_CLIENT_TICK) AppendToBuffer(buffer, &current.clientTick, sizeof(current.clientTick));
+		if (flags & CHANGED_CMD_FORWARD) AppendToBuffer(buffer, &current.forward, sizeof(current.forward));
+		if (flags & CHANGED_CMD_LEFT) AppendToBuffer(buffer, &current.left, sizeof(current.left));
+		if (flags & CHANGED_CMD_UP) AppendToBuffer(buffer, &current.up, sizeof(current.up));
+		if (flags & CHANGED_CMD_BUTTONS_0) AppendToBuffer(buffer, &current.buttons[0], sizeof(current.buttons[0]));
+		if (flags & CHANGED_CMD_BUTTONS_1) AppendToBuffer(buffer, &current.buttons[1], sizeof(current.buttons[1]));
+		if (flags & CHANGED_CMD_BUTTONS_2) AppendToBuffer(buffer, &current.buttons[2], sizeof(current.buttons[2]));
+		if (flags & CHANGED_CMD_ANGLES) AppendToBuffer(buffer, &current.angles, sizeof(current.angles));
+		if (flags & CHANGED_CMD_MOUSEDX) AppendToBuffer(buffer, &current.mousedx, sizeof(current.mousedx));
+		if (flags & CHANGED_CMD_MOUSEDY) AppendToBuffer(buffer, &current.mousedy, sizeof(current.mousedy));
+		if (flags & CHANGED_CMD_SENSITIVITY) AppendToBuffer(buffer, &current.sensitivity, sizeof(current.sensitivity));
+		if (flags & CHANGED_CMD_M_YAW) AppendToBuffer(buffer, &current.m_yaw, sizeof(current.m_yaw));
+		if (flags & CHANGED_CMD_M_PITCH) AppendToBuffer(buffer, &current.m_pitch, sizeof(current.m_pitch));
+		// clang-format on
+	}
+
+	// Compress the buffer
+	void *compressedData = nullptr;
+	size_t compressedSize = 0;
+
+	bool success = Compress(buffer.data(), buffer.size(), &compressedData, &compressedSize);
+	if (!success)
+	{
+		return 0;
+	}
+
+	CompressedSectionHeader header;
+	header.compressedSize = (u32)compressedSize;
+	header.uncompressedSize = (u32)buffer.size();
+	header.elementCount = (u32)cmdData.size();
+
+	AppendToBuffer(outBuffer, &header, sizeof(header));
+	bytesWritten += (i32)sizeof(header);
+	AppendToBuffer(outBuffer, compressedData, compressedSize);
+	bytesWritten += (i32)compressedSize;
+
+	delete[] static_cast<char *>(compressedData);
+
+	// Compress cmd subtick data
+	void *compressedSubtick = nullptr;
+	size_t compressedSubtickSize = 0;
+	size_t uncompressedSubtickSize = cmdSubtickData.size() * sizeof(SubtickData);
+
+	success = Compress(cmdSubtickData.data(), uncompressedSubtickSize, &compressedSubtick, &compressedSubtickSize);
+
+	if (success)
+	{
+		CompressedSectionHeader subtickHeader;
+		subtickHeader.compressedSize = (u32)compressedSubtickSize;
+		subtickHeader.uncompressedSize = (u32)uncompressedSubtickSize;
+		subtickHeader.elementCount = (u32)cmdSubtickData.size();
+
+		AppendToBuffer(outBuffer, &subtickHeader, sizeof(subtickHeader));
+		bytesWritten += (i32)sizeof(subtickHeader);
+		AppendToBuffer(outBuffer, compressedSubtick, compressedSubtickSize);
+		bytesWritten += (i32)compressedSubtickSize;
+
+		delete[] static_cast<char *>(compressedSubtick);
+	}
+
+	return bytesWritten;
+}

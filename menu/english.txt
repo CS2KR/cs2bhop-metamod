@@ -1,0 +1,149 @@
+// CS2Bhop Menu (English)
+// English radio menu support addon for CS2Bhop plugin.
+"RadioPanel.txt"
+{
+	"Groups"
+	{
+		"menu_simple"
+		{
+			"hotkey"	"0"
+			"title"		"Main Menu"
+			"timeout"	"100000"
+
+			"Commands"
+			{
+				"Respawn"
+				{
+					"hotkey"	"1"
+					"label"		"Respawn"
+					"cmd"		"bhop_r; radio"
+				}
+
+				"Respawn Stage"
+				{
+					"hotkey"	"2"
+					"label"		"Respawn Stage"
+					"cmd"		"bhop_rs; radio"
+				}
+
+				"Respawn Bonus"
+				{
+					"hotkey"	"3"
+					"label"		"Respawn Bonus"
+					"cmd"		"bhop_rb; radio"
+				}
+
+				"Pause"
+				{
+					"hotkey"	"4"
+					"label"		"Pause/Resume"
+					"cmd"		"bhop_pause; radio"
+				}
+
+				"Noclip"
+				{
+					"hotkey"	"5"
+					"label"		"Toggle Noclip"
+					"cmd"		"bhop_noclip; radio"
+				}
+			}
+		}
+
+		"menu_advanced"
+		{
+			"hotkey"	"1"
+			"title"		"Practice Menu"
+			"timeout"	"100000"
+
+			"Commands"
+			{
+				"Saveloc"
+				{
+					"hotkey"	"1"
+					"label"		"Saveloc"
+					"cmd"		"bhop_cp; radio1"
+				}
+
+				"Loadloc"
+				{
+					"hotkey"	"2"
+					"label"		"Loadloc"
+					"cmd"		"bhop_tp; radio1"
+				}
+				
+				"Prevloc"
+				{
+					"hotkey"	"3"
+					"label"		"Prevloc"
+					"cmd"		"bhop_prevcp; radio1"
+				}
+
+				"Nextloc"
+				{
+					"hotkey"	"4"
+					"label"		"Nextloc"
+					"cmd"		"bhop_nextcp; radio1"
+				}
+
+				"Respawn"
+				{
+					"hotkey"	"5"
+					"label"		"Respawn"
+					"cmd"		"bhop_r; radio1"
+				}
+
+				"Noclip"
+				{
+					"hotkey"	"6"
+					"label"		"Toggle Noclip"
+					"cmd"		"bhop_noclip; radio1"
+				}
+			}
+		}
+
+		"menu_option"
+		{
+			"hotkey"	"2"
+			"title"		"Option Menu"
+			"timeout"	"100000"
+
+			"Commands"
+			{
+				"Set Custom Start Position"
+				{
+					"hotkey"	"1"
+					"label"		"Set Custom Start Position"
+					"cmd"		"bhop_ssp"
+				}
+				
+				"Clear Custom Start Position"
+				{
+					"hotkey"	"2"
+					"label"		"Clear Custom Start Position"
+					"cmd"		"bhop_csp"
+				}
+
+				"Hide"
+				{
+					"hotkey"	"3"
+					"label"		"Show/Hide Other Players"
+					"cmd"		"bhop_hide"
+				}
+
+				"Hide Weapon"
+				{
+					"hotkey"	"4"
+					"label"		"Show/Hide Weapon"
+					"cmd"		"bhop_hideweapon"
+				}
+
+				"Hide Legs"
+				{
+					"hotkey"	"5"
+					"label"		"Show/Hide Legs"
+					"cmd"		"bhop_hidelegs"
+				}
+			}
+		}
+	}
+}

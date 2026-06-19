@@ -1,0 +1,39 @@
+#pragma once
+#include "../bhop.h"
+#include "iserver.h"
+#include "networksystem/inetworkserializer.h"
+
+namespace Bhop::quiet
+{
+	void OnCheckTransmit(CCheckTransmitInfo **pInfo, int infoCount);
+
+	void OnPostEvent(INetworkMessageInternal *pEvent, const CNetMessage *pData, const uint64 *clients);
+} // namespace Bhop::quiet
+
+class BhopQuietService : public BhopBaseService
+{
+	using BhopBaseService::BhopBaseService;
+	u8 lastObserverMode;
+	CHandle<CBaseEntity> lastObserverTarget;
+	bool hideWeapon {};
+
+public:
+	bool hideOtherPlayers {};
+	static void Init();
+	virtual void Reset() override;
+
+	void OnPhysicsSimulatePost();
+	void OnPlayerPreferencesLoaded();
+	void ToggleHide();
+	void UpdateHideState();
+	void SendFullUpdate();
+	bool ShouldHide();
+	bool ShouldHideIndex(u32 targetIndex);
+
+	bool ShouldHideWeapon()
+	{
+		return this->hideWeapon;
+	}
+
+	void ToggleHideWeapon();
+};

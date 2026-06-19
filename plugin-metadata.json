@@ -1,0 +1,11 @@
+{
+    "name": "cs2bhop",
+    "alias": "cs2bhop",
+    "display_name": "CS2Bhop",
+    "description": "CS2 Bhop Timer",
+    "author": "zer0.k, adapted for bhop by rcnoob",
+    "url": "",
+    "log_tag": "CS2Bhop",
+    "license": "AGPLv3",
+    "version": "0.0.0-dev"
+}

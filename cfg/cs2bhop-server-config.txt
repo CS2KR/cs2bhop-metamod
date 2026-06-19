@@ -1,0 +1,63 @@
+"ServerCfg"
+{
+	// Default mode for players.
+	"defaultMode"						"128tick"
+	
+	// Default style for players.
+	"defaultStyles"						""
+	
+	// How long should a map run for before it must be reloaded in minutes (maximum 24 hours)
+	"defaultTimeLimit"					"60.0"
+	
+	// Default language to be used if client does not set a language/language is not supported
+	"defaultLanguage"					"en"
+	
+	// Interval between tips.
+	"tipInterval"						"75"
+	
+	// Enable this to automatically record a one minute long demo of players when someone is flagged for cheating.
+	"autoDemoRecording"					"false"
+	
+	// Default chat prefix.
+	"chatPrefix"						"{lime}Bhop {grey}|{default}"
+	
+	// Whether we override chat processing or not.
+	"overridePlayerChat"			"true"
+
+	// Default FOV for players.
+	"defaultFOV"						"90"
+	
+	// Minimum FOV for players.
+	"minFOV"							"80"
+
+	// Maximum FOV for players.
+	"maxFOV"							"130"
+
+	// Maximum amount of manually saved replays allowed per player (minimum 2).
+	"maxManualReplays"					"2"
+
+	// Maximum amount of run replays to keep per category (top N by time, minimum 2).
+	"maxRunReplaysPerGroup"				"3"
+
+	// Number of minutes to keep archived replays before deletion (minimum 24 hours, default 48 hours).
+	"archiveRetentionMinutes"			"2880"
+
+	// Local database configurations.
+	"db"
+	{
+		"driver"	"sqlite"
+		"database"	"cs2bhop"
+		
+		// MySQL connections only, required
+		"host"		"192.168.1.8"
+		"user"		"root"
+		"pass"		"root"
+		
+		// MySQL connections only, optional
+		//"timeout"			"60"
+		//"port"			"3306"
+	}
+
+	"apiUrl"	""
+	"apiKey"	""
+}

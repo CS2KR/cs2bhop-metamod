@@ -1,0 +1,53 @@
+"Phrases"
+{
+	"Tip - bhop_replay"
+	{
+		"en"		"{grey}Type {default}!replay {grey}to watch the server's fastest runs."
+		"chi"		"{grey}在聊天框中输入 {default}!replay {grey}以观察最快纪录视角."
+		"ru"		"{grey}Напишите {default}!replay {grey}для просмотра лучшего прохождения карты на этом сервере."
+	}
+	"Tip - bhop_replays"
+	{
+		"en"		"{grey}Type {default}!replays {grey}to list available replays in the server."
+	}
+	"Tip - bhop_rpgoto"
+	{
+		"en"		"{grey}Type {default}!rpgoto <time> {grey}to jump to a specific time in the replay."
+	}
+	"Tip - bhop_rpgototick"
+	{
+		"en"		"{grey}Type {default}!rpgototick <tick> {grey}to jump to a specific tick in the replay."
+	}
+	"Tip - bhop_rpinfo"
+	{
+		"en"		"{grey}Type {default}!rpinfo {grey}to show information about the current replay."
+	}
+	"Tip - bhop_rppause"
+	{
+		"en"		"{grey}Type {default}!rppause {grey}to pause or resume the replay playback."
+	}
+	"Tip - bhop_rploadprogress"
+	{
+		"en"		"{grey}Type {default}!rploadprogress {grey}to check the loading progress of a replay."
+	}
+	"Tip - bhop_rpcancelload"
+	{
+		"en"		"{grey}Type {default}!rpcancelload {grey}to cancel loading a replay."
+	}
+	"Tip - bhop_rpseek"
+	{
+		"en"		"{grey}Type {default}!rpseek <+/-time> {grey}to relatively seek to a time in the replay."
+	}
+	"Tip - bhop_rpsave"
+	{
+		"en"		"{grey}Type {default}!rpsave <seconds> {grey}to save a manual replay of up to the specified duration."
+	}
+    "Tip - Replay Storage Policy"
+    {
+	    "en"        "{grey}Older or less important replays may be automatically removed over time to free up server space. Saving new manual replays can overwrite previous ones."
+    }
+	"Tip - bhop_rphidelegs"
+	{
+		"en"		"{grey}Type {default}!rphidelegs {grey}to toggle the visibility of the replay bot's first person legs."
+	}
+}

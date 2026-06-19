@@ -1,0 +1,58 @@
+#include "bhop_db.h"
+#include "vendor/sql_mm/src/public/sql_mm.h"
+#include "queries/personal_best.h"
+
+void BhopDatabaseService::QueryPB(u64 steamID64, CUtlString mapName, CUtlString courseName, u32 modeID, TransactionSuccessCallbackFunc onSuccess,
+								  TransactionFailureCallbackFunc onFailure)
+{
+	std::string cleanedMapName = BhopDatabaseService::GetDatabaseConnection()->Escape(mapName.Get());
+	std::string cleanedCourseName = BhopDatabaseService::GetDatabaseConnection()->Escape(courseName.Get());
+
+	Transaction txn;
+
+	char query[2048];
+	// Get PB
+	V_snprintf(query, sizeof(query), sql_getpb, steamID64, cleanedMapName.c_str(), cleanedCourseName.c_str(), modeID, 0ull, 1);
+	txn.queries.push_back(query);
+
+	// Get Rank
+	V_snprintf(query, sizeof(query), sql_getmaprank, cleanedMapName.c_str(), cleanedCourseName.c_str(), modeID, steamID64, cleanedMapName.c_str(),
+			   cleanedCourseName.c_str(), modeID);
+	txn.queries.push_back(query);
+
+	// Get Number of Players with Times
+	V_snprintf(query, sizeof(query), sql_getlowestmaprank, cleanedMapName.c_str(), cleanedCourseName.c_str(), modeID);
+	txn.queries.push_back(query);
+
+	BhopDatabaseService::GetDatabaseConnection()->ExecuteTransaction(txn, onSuccess, onFailure);
+}
+
+void BhopDatabaseService::QueryPBRankless(u64 steamID64, CUtlString mapName, CUtlString courseName, u32 modeID, u64 styleIDFlags,
+										  TransactionSuccessCallbackFunc onSuccess, TransactionFailureCallbackFunc onFailure)
+{
+	std::string cleanedMapName = BhopDatabaseService::GetDatabaseConnection()->Escape(mapName.Get());
+
+	std::string cleanedCourseName = BhopDatabaseService::GetDatabaseConnection()->Escape(courseName.Get());
+
+	char query[2048];
+	Transaction txn;
+	// Get PB
+	V_snprintf(query, sizeof(query), sql_getpb, steamID64, cleanedMapName.c_str(), cleanedCourseName.c_str(), modeID, styleIDFlags, 1);
+	txn.queries.push_back(query);
+
+	BhopDatabaseService::GetDatabaseConnection()->ExecuteTransaction(txn, onSuccess, onFailure);
+}
+
+void BhopDatabaseService::QueryAllPBs(u64 steamID64, CUtlString mapName, TransactionSuccessCallbackFunc onSuccess,
+									  TransactionFailureCallbackFunc onFailure)
+{
+	std::string cleanedMapName = BhopDatabaseService::GetDatabaseConnection()->Escape(mapName.Get());
+	Transaction txn;
+
+	char query[2048];
+	// Get PB
+	V_snprintf(query, sizeof(query), sql_getpbs, steamID64, cleanedMapName.c_str());
+	txn.queries.push_back(query);
+
+	BhopDatabaseService::GetDatabaseConnection()->ExecuteTransaction(txn, onSuccess, onFailure);
+}
