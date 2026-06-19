@@ -38,23 +38,23 @@
 	}
 	"Replay - Tick Out Of Range"
 	{
-		"#format"	"tick:d,maxTick:d"
+		"#format"	"{darkred}Invalid tick number. Must be a positive integer."
 		"en"		"{grey}Tick {lime}{tick}{grey} is out of range. Maximum tick: {lime}{maxTick}"
 	}
 	"Replay - Time Out Of Range"
 	{
-		"#format"	"time:s,maxTime:s"
+		"#format"	"{grey}Tick {lime}{tick}{grey} is out of range. Maximum tick: {lime}{maxTick}"
 		"en"		"{grey}Time {lime}{time}{grey} is out of range. Maximum time: {lime}{maxTime}"
 	}
 	"Replay - Jumped To Tick"
 	{
-		"#format"	"tick:d,time:s"
+		"#format"	"{grey}Time {lime}{time}{grey} is out of range. Maximum time: {lime}{maxTime}"
 		"en"		"{grey}Jumped to tick {lime}{tick} ({lime}{time}{grey})"
 	}
 	"Replay - Current Info"
 	{
 		// Current tick: 1234/5678 (12:34/23:45). Check console for details!
-		"#format"	"currentTick:d,totalTicks:d,time:s,maxTime:s"
+		"#format"	"{grey}Jumped to tick {lime}{tick} ({lime}{time}{grey})"
 		"en"		"{grey}Current tick: {lime}{currentTick}{grey}/{lime}{totalTicks}{grey} ({lime}{time}{grey}/{lime}{maxTime}{grey}). Check console for details!"
 	}
 	"Replay - General Info Console"
@@ -64,14 +64,14 @@
 		// Created On: 2024-01-01 12:34:56
 		// Server Version: 2000648
 		// Plugin Version: 1.2.3
-		"#format"	"uuid:s,playerName:s,playerSteamID:llu,createdOn:s,serverVersion:lu,pluginVersion:s"
+		"#format"	"{grey}Current tick: {lime}{currentTick}{grey}/{lime}{totalTicks}{grey} ({lime}{time}{grey}/{lime}{maxTime}{grey}). Check console for details!"
 		"en"		"Replay {uuid}\nPlayer: {playerName} ({playerSteamID})\nCreated On: {createdOn}\nServer Version: {serverVersion}\nPlugin Version: {pluginVersion}"
 	}
 	"Replay - Cheater Info Console"
 	{
 		// Replay Type: Cheater
 		// Suspect Reason: abcdef
-		"#format"	"reason:s"
+		"#format"	"Replay {uuid}\nPlayer: {playerName} ({playerSteamID})\nCreated On: {createdOn}\nServer Version: {serverVersion}\nPlugin Version: {pluginVersion}"
 		"en"		"Replay Type: Cheater\nSuspect Reason: {reason}"
 	}
 	"Replay - Run Info Console"
@@ -80,20 +80,20 @@
 		// Course: Main
 		// Mode: Classic*
 		// Time: 12:34.567
-		"#format"	"name:s,mode:s,time:s"
+		"#format"	"Replay Type: Cheater\nSuspect Reason: {reason}"
 		"en"		"Replay Type: Run\nCourse: {name}\nMode + Styles: {mode}\nTime: {time}"
 	}
 	"Replay - Manual Info Console"
 	{
 		// Replay Type: Manual
 		// Saved By: Alice (765498765432109)
-		"#format"	"playerName:s,playerSteamID:llu"
+		"#format"	"Replay Type: Run\nCourse: {name}\nMode + Styles: {mode}\nTime: {time}"
 		"en"		"Replay Type: Manual\nSaved By: {playerName} ({playerSteamID})"
 	}
 	"Replay - Seeked To Tick"
 	{
 		// Seeked 12.345s to tick 6789 (12:34)
-		"#format"	"seekSeconds:.3f,tick:d,time:s"
+		"#format"	"Replay Type: Manual\nSaved By: {playerName} ({playerSteamID})"
 		"en"		"{grey}Seeked {lime}{seekSeconds}{grey}s to tick {lime}{tick}{grey} ({lime}{time}{grey})"
 	}
 	"Replay - Hide Player Legs - Enable"
@@ -126,7 +126,7 @@
 	}
 	"Replay - Multiple Matches"
 	{
-		"#format"	"uuid:s"
+		"#format"	"{darkred}Invalid UUID format"
 		"en"		"{darkred}Multiple replays match UUID substring {grey}'{default}{uuid}{grey}'."
 	}
 	"Replay - Loaded Successfully"
@@ -139,7 +139,7 @@
 	}
 	"Replay - Loading Progress"
 	{
-		"#format"	"progress:.1f"
+		"#format"	"{grey}No replay loading in progress"
 		"en"		"{grey}Loading replay: {progress}%%%% complete"
 	}
 	"Replay - Loading Completed"
@@ -168,15 +168,15 @@
 	}
 	"Replay - Manual Replay Saved"
 	{
-		"#format"	"uuid:s,duration:.0f"
+		"#format"	"{darkred}Failed to save manual replay."
 		"en"		"{grey}Replay saved: {lime}{uuid}{grey} ({lime}{duration}{grey}s)" 
 	}
 	"Replay - Manual Replay Saved (Console)"
 	{
-		"#format"	"uuid:s,duration:.0f"
+		"#format"	"{grey}Replay saved: {lime}{uuid}{grey} ({lime}{duration}{grey}s)"
 		"en"		"Replay saved: {uuid} ({duration}s)" 
-		"chi"		"回放已保存: {uuid} ({duration}s)" 
-		"ua"		"Повтор збережено: {uuid} ({duration}с.)" 
+		"chi"		"Replay saved: {uuid} ({duration}s)"
+		"ua"		"Replay saved: {uuid} ({duration}s)"
 	}
 	"Replay - Run Replay Failed"
 	{
@@ -184,29 +184,29 @@
 	}
 	"Replay - Run Replay Saved"
 	{
-		"#format"	"uuid:s"
+		"#format"	"{darkred}Failed to save run replay."
 		"en"		"{grey}Replay saved: {lime}{uuid}{grey}"
 	}
 	"Replay - Run Replay Saved (Console)"
 	{
-		"#format"	"uuid:s"
+		"#format"	"{grey}Replay saved: {lime}{uuid}{grey}"
 		"en"		"Replay saved: {uuid}"
-		"chi"		"回放已保存: {uuid}"
-		"ua"		"Повтор збережено: {uuid}"
+		"chi"		"Replay saved: {uuid}"
+		"ua"		"Replay saved: {uuid}"
 	}
 	"Replay - Wrong Map"
 	{
-		"#format"	"replayMap:s,currentMap:s"
+		"#format"	"Replay saved: {uuid}"
 		"en"		"{darkred}Replay map does not match current map.{grey} (Replay: {default}{replayMap}{grey}, Current: {default}{currentMap}{grey})"
 	}
 	"Replay - Unknown Mode"
 	{
-		"#format"	"modeName:s"
+		"#format"	"{darkred}Replay map does not match current map.{grey} (Replay: {default}{replayMap}{grey}, Current: {default}{currentMap}{grey})"
 		"en"		"{darkred}Mode {default}{modeName}{darkred} is not available. Playback might be inaccurate."
 	}
 	"Replay - Unknown Style"
 	{
-		"#format"	"styleName:s"
+		"#format"	"{darkred}Mode {default}{modeName}{darkred} is not available. Playback might be inaccurate."
 		"en"		"{darkred}Style {default}{styleName}{darkred} is not available. Playback might be inaccurate."
 	}
 	
