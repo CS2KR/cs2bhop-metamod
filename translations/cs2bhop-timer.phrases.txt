@@ -54,7 +54,7 @@
 	}
 	"Beat Course Info - Basic"
 	{
-		// GameChaos finished "blocks2006" in 10:06.84 | VNL | PRO
+		// GameChaos finished "blocks2006" in 10:06.84 | 128tick
 		"#format"	" ({color}{diff_text}{grey})"
 		"en"		"{lime}{player_name} {grey}finished {default}{course_name}{grey} in {default}{time}{grey} | {mode_style_text}"
 		"chi"		"{lime}{player_name} {grey}finished {default}{course_name}{grey} in {default}{time}{grey} | {mode_style_text}"

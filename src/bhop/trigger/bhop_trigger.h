@@ -15,7 +15,7 @@
 	Due to 2 and 4, this means the first time the player touches a trigger, Touch is fired twice.
 	This is different from CS:GO, where Touch can only fire once with StartTouch and it does not fire with EndTouch.
 
-	Modes that use this service need to implement their own trigger touching using TouchTriggersAlongPath and UpdateTriggerTouchList (see VNL).
+	Modes that use this service need to implement their own trigger touching using TouchTriggersAlongPath and UpdateTriggerTouchList.
 */
 
 struct BhopCourseDescriptor;

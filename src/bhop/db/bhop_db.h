@@ -29,6 +29,8 @@ public:
 
 	virtual void OnMapSetup() {}
 
+	virtual void OnCoursesSetup() {}
+
 	virtual void OnTimeInserted(Player *player, u64 steamID64, u32 mapID, u32 course, u64 mode, u64 styles, u64 runtimeMS) {}
 
 	virtual void OnTimeProcessed(Player *player, u64 steamID64, u32 mapID, u32 course, u64 mode, u64 styles, u64 runtimeMS, bool firstTime,

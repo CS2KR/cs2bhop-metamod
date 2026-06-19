@@ -6,10 +6,11 @@ Metamod plugin for CS2 bhop servers, based on `cs2surf-metamod`.
 
 - `128tick` is the built-in default bhop mode.
 - `CSS66tick` is packaged as an optional mode plugin under `addons/cs2bhop/modes`.
+- No style plugins are packaged by default. The style loader remains available for later external style plugins under `addons/cs2bhop/styles`.
 
 ## Fake Zoning
 
-Fake zoning is resolved from map entities. On maps without the official Mapping API, the plugin inspects spawned `trigger_multiple` entities and treats common bhop/timer names as timer zones:
+Fake zoning is resolved from map entities. On maps without the official Mapping API, the plugin inspects spawned `trigger_multiple` entities, reads their `targetname` with an entity-name fallback, and treats common bhop/timer names as timer zones:
 
 - Start: `map_start`, `s1_start`, `stage1_start`, `timer_startzone`, `trigger_startzone`, `zone_start`
 - End: `map_end`, `timer_endzone`, `trigger_endzone`, `zone_end`
@@ -21,6 +22,15 @@ Per-map trigger aliases can be shared in `addons/cs2bhop/zones/<map>.json`:
 
 ```json
 {
+  "schema": "cs2bhop.fake-zones",
+  "schemaVersion": 1,
+  "map": "bhop_example",
+  "source": "trigger_multiple.targetname",
+  "compatibility": {
+    "sharpTimerTriggerAliases": true,
+    "coordinateBoxes": false,
+    "officialMappingApi": false
+  },
   "MapStartTrigger": "custom_start_trigger_name",
   "MapEndTrigger": "custom_end_trigger_name",
   "MapStartTriggers": ["alternate_start_name"],
@@ -28,10 +38,11 @@ Per-map trigger aliases can be shared in `addons/cs2bhop/zones/<map>.json`:
 }
 ```
 
-Use `!zoneexport` or `!savezones` after loading a map to save the detected start/end trigger aliases into that per-map JSON file.
+Use `!zoneexport` or `!savezones` after the map's first round start to save the detected start/end trigger aliases into that per-map JSON file.
+Configured trigger aliases take precedence over automatic stage, checkpoint, and bonus name patterns.
 
 For migration from SharpTimer, trigger alias keys are also read from `cfg/SharpTimer/MapData/<map>.json` when present. Coordinate fake-zone keys
-such as `MapStartC1`/`MapStartC2` are intentionally not treated as entity detection.
+such as `MapStartC1`/`MapStartC2` are SharpTimer box zones, not map entity detection, so they are intentionally not used by this fake-zone path.
 
 The detected trigger bounds are passed through the same timer start/end path as official Mapping API zones, so later global/API compatibility can converge on the same course and mode descriptors.
 

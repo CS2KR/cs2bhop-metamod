@@ -162,7 +162,7 @@ struct PBRequest : public BaseRequest
 			combinedModeStyleText += "{grey}";
 		}
 
-		// Player on bhop_map (Main) [VNL]
+		// Player on bhop_map (Main) [128tick]
 		player->languageService->PrintChat(true, false, "PB Header", targetPlayerName.Get(), mapName.Get(), courseName.Get(),
 										   combinedModeStyleText.Get());
 

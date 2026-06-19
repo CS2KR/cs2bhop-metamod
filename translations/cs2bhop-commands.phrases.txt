@@ -814,6 +814,11 @@
 		"en"		"Switch to 128tick mode."
 		"pt"		"Alterar para o modo 128tick."
 	}
+	"Command Description - bhop_CSS66"
+	{
+		"en"		"Switch to CSS66tick mode."
+		"pt"		"Alterar para o modo CSS66tick."
+	}
 	"Command Description - bhop_pb"
 	{
 		"en"		"Retrieve personal best statistics."

@@ -15,6 +15,8 @@ bool BhopDatabaseService::AreCoursesSetUp()
 
 void BhopDatabaseService::SetupCourses(CUtlVector<BhopCourseDescriptor *> &courses)
 {
+	coursesSetUp = false;
+
 	char query[2048];
 	Transaction txn;
 	FOR_EACH_VEC(courses, i)
@@ -64,6 +66,7 @@ void BhopDatabaseService::SetupCourses(CUtlVector<BhopCourseDescriptor *> &cours
 				}
 			}
 			coursesSetUp = true;
+			CALL_FORWARD(eventListeners, OnCoursesSetup);
 		},
 		OnGenericTxnFailure);
 	// clang-format on

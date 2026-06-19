@@ -13,7 +13,7 @@
 		"it"	"{grey}Use {default}/help {grey}to see all available bhop commands."
 		"es"	"{grey}Use {default}/help {grey}to see all available bhop commands."
 
-		//"de"	"{grey}Verwende {default}/help {grey}, um alle verf체gbaren KZ-Befehle anzuzeigen."
+		//"de"	"{grey}Verwende {default}/help {grey}, um alle verf체gbaren bhop-Befehle anzuzeigen."
 
 		"ko"	"{grey}Use {default}/help {grey}to see all available bhop commands."
 		"lv"	"{grey}Use {default}/help {grey}to see all available bhop commands."
@@ -136,11 +136,6 @@
 		"lv"    "{grey}Teleport to the next checkpoint with {default}/nextcp{grey}."
 		"pt"	"{grey}Teleporte para o pr처ximo checkpoint com {default}/nextcp{grey}."
 	}
-	//"Tip - website"
-	//{
-	//	"en"	"{grey}Visit official cs2bhop website for up-to-date maps, records and servers: {default}https://cs2kz.org{grey}"
-	//	"chi"	"{grey}溫욥뿮CS2KZ若섉뼶營묊쳶餓θ렩?뽪??곁쉪?겼쎗?곮?壤뺝뭽?띶뒦?? {default}https://cs2kz.org{grey}"
-	//}
 	"Tip - bugs"
 	{
 		"en"	"{grey}Report issues related to cs2bhop on our GitHub: {default}https://github.com/CS2KR/cs2bhop-metamod/issues{grey}"

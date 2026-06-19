@@ -70,14 +70,14 @@ jobs:
       - name: Make build directory
         run: mkdir ./build
 
-      - name: Configure AMBuild
-        working-directory: build
-        run: python3 ../configure.py --enable-optimize
-
       - name: Update version header
         shell: bash
         run: |
           sed -i 's/"version": "0.0.0-dev"/"version": "${{ inputs.version }}"/' ./plugin-metadata.json
+
+      - name: Configure AMBuild
+        working-directory: build
+        run: python3 ../configure.py --enable-optimize
 
       - name: Run AMBuild
         working-directory: build

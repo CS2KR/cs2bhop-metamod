@@ -122,10 +122,10 @@ class MMSPluginConfig(object):
       'alias': 'cs2bhop',
       'display_name': 'CS2Bhop',
       'description': 'CS2 Bhop Timer',
-      'author': 'zer0.k, adapted for bhop by rcnoob',
-      'url': '',
+      'author': 'CS2KR; based on cs2surf-metamod by zer0.k and rcnoob',
+      'url': 'https://github.com/CS2KR/cs2bhop-metamod',
       'log_tag': 'CS2Bhop',
-      'license': 'GPLv3',
+      'license': 'AGPLv3',
       'version': '0.0.0-dev'
     }
 

@@ -39,6 +39,7 @@ static_global class BhopDatabaseServiceEventListener_Timer : public BhopDatabase
 {
 public:
 	virtual void OnMapSetup() override;
+	virtual void OnCoursesSetup() override;
 	virtual void OnClientSetup(Player *player, u64 steamID64, bool isCheater) override;
 } databaseEventListener;
 
@@ -1357,8 +1358,11 @@ void BhopTimerService::OnPlayerPreferencesLoaded()
 
 void BhopDatabaseServiceEventListener_Timer::OnMapSetup()
 {
-	// TODO: find a better way to do this, we now call SetupLocalCourses after all trigger_multiple spawns
-	// Bhop::course::SetupLocalCourses();
+	Bhop::course::SetupLocalCourses();
+}
+
+void BhopDatabaseServiceEventListener_Timer::OnCoursesSetup()
+{
 	BhopTimerService::UpdateLocalRecordCache();
 }
 

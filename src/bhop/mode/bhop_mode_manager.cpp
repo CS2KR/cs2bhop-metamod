@@ -227,7 +227,7 @@ bool BhopModeManager::RegisterMode(PluginId id, const char *shortModeName, const
 void BhopModeManager::UnregisterMode(PluginId id)
 {
 	// Cannot unregister the built-in 128t mode.
-	if (id = g_PLID)
+	if (id == g_PLID)
 	{
 		return;
 	}

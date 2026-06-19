@@ -30,6 +30,7 @@ struct RunSubmission
 	bool finalized {};
 	bool runAnnounced {};
 	bool localSubmitted {};
+	bool waitingForLocalCourseID {};
 
 	std::vector<char> replayBuffer;
 
@@ -55,6 +56,7 @@ struct RunSubmission
 	{
 		std::string name {};
 		std::string md5 {};
+		PluginId pluginID {};
 		u32 localID {};
 	} mode;
 
@@ -117,6 +119,7 @@ struct RunSubmission
 	{
 		RunSubmission *sub = new RunSubmission(player);
 		submissions.push_back(sub);
+		sub->Start();
 		return sub;
 	}
 
@@ -144,7 +147,11 @@ struct RunSubmission
 	}
 
 private:
+	void Start();
+
 	void TryFinalize();
+
+	bool TryResolveLocalCourseID();
 
 	void SubmitLocal(const char *uuid);
 

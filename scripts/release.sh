@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+set -euo pipefail
+shopt -s nullglob
 
 # Paths for Linux artifacts
 CS2BHOP_SO="/home/runner/artifacts/cs2bhop-linux/addons/cs2bhop/bin/linuxsteamrt64/cs2bhop.so"
@@ -24,7 +26,7 @@ modes_json=$(jq -n \
     --arg linux_checksum "$cs2bhop_sum_lin" \
     --arg windows_checksum "$cs2bhop_sum_win" \
     '{
-      mode: "vnl",
+      mode: "128tick",
       linux_checksum: $linux_checksum,
       windows_checksum: $windows_checksum
     }')
@@ -32,11 +34,15 @@ styles_json=""
 
 # Process modes
 for mode_lin in "$LINUX_MODES_DIR"/cs2bhop-mode-*.so; do
-  mode_name=$(basename "$mode_lin" | sed -E 's/.*-(\w+)\.so/\1/')
+  mode_name=$(basename "$mode_lin" | sed -E 's/^cs2bhop-mode-(.+)\.so$/\1/')
+  if [[ "$mode_name" == "css" ]]; then
+    mode_name="CSS66tick"
+  fi
   mode_sum_lin=$(md5sum "$mode_lin" | awk '{ print $1 }')
 
   # Find corresponding Windows mode file
-  mode_win="$WINDOWS_MODES_DIR/cs2bhop-mode-$mode_name.dll"
+  mode_file_name=$(basename "$mode_lin" | sed -E 's/^cs2bhop-mode-(.+)\.so$/\1/')
+  mode_win="$WINDOWS_MODES_DIR/cs2bhop-mode-$mode_file_name.dll"
   if [[ -f "$mode_win" ]]; then
     mode_sum_win=$(md5sum "$mode_win" | awk '{ print $1 }')
   else
@@ -59,7 +65,7 @@ done
 
 # Process styles
 for style_lin in "$LINUX_STYLES_DIR"/cs2bhop-style-*.so; do
-  style_name=$(basename "$style_lin" | sed -E 's/.*-(\w+)\.so/\1/')
+  style_name=$(basename "$style_lin" | sed -E 's/^cs2bhop-style-(.+)\.so$/\1/')
   style_sum_lin=$(md5sum "$style_lin" | awk '{ print $1 }')
 
   # Find corresponding Windows style file
@@ -112,23 +118,9 @@ json_payload=$(jq -n \
     styles: $styles
   }')
 
-AUTH_TOKEN="$3"
+MANIFEST_DIR="/home/runner/releases"
+mkdir -p "$MANIFEST_DIR"
+printf '%s\n' "$json_payload" > "$MANIFEST_DIR/cs2bhop-version-v$VERSION.json"
 
-# TODO: automatic version approval for global
-: '
-response=$(curl -s -o /dev/null -w "%{http_code}" \
-  -X POST https://api.cs2kz.org/plugin/versions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $AUTH_TOKEN" \
-  -d "$json_payload")
-
-# Check the response status code
-if [[ $response -eq 201 ]]; then
-  echo "POST request successful!"
-else
-  echo "POST request failed with status code: $response"
-  echo "Payload:"
-  echo "$json_payload"
-  exit 1
-fi
-'
+# Global API publication is intentionally deferred until a CS2Bhop endpoint exists.
+# The manifest above preserves the future API payload without posting to another service.

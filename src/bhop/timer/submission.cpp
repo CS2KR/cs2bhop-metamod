@@ -53,8 +53,8 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	auto mode = Bhop::mode::GetModeInfo(player->modeService);
 	this->mode.name = mode.shortModeName;
 	Bhop::API::Mode apiMode;
-	this->global = Bhop::API::DecodeModeString(this->mode.name, apiMode);
-	if (!this->global)
+	bool hasGlobalApiMode = Bhop::API::DecodeModeString(this->mode.name, apiMode);
+	if (!hasGlobalApiMode)
 	{
 		if (bhop_debug_announce_global.Get())
 		{
@@ -62,6 +62,7 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 		}
 	}
 	this->mode.md5 = mode.md5;
+	this->mode.pluginID = mode.id;
 	if (mode.databaseID <= 0)
 	{
 		this->local = false;
@@ -81,6 +82,11 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	assert(player->timerService->GetCourse());
 	this->course.name = player->timerService->GetCourse()->GetName().Get();
 	this->course.localID = player->timerService->GetCourse()->localDatabaseID;
+	if (this->local && this->course.localID <= 0)
+	{
+		this->waitingForLocalCourseID = true;
+		Bhop::course::SetupLocalCourses();
+	}
 
 	// clang-format off
 
@@ -121,9 +127,23 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 		}
 		else
 		{
-			this->globalFilterID = (apiMode == Bhop::API::Mode::Classic)
-				? course->filters.classic.id
-				: course->filters.vanilla.id;
+			if (apiMode == Bhop::API::Mode::_128tick)
+			{
+				this->globalFilterID = course->filters._128tick.id;
+			}
+			else if (apiMode == Bhop::API::Mode::CSS66 && course->filters.css66)
+			{
+				this->globalFilterID = course->filters.css66->id;
+			}
+			else
+			{
+				if (bhop_debug_announce_global.Get())
+				{
+					META_CONPRINTF("[Bhop::Global - %u] Course '%s' has no compatible global filter for mode '%s'.\n", uid,
+								   this->course.name.c_str(), this->mode.name.c_str());
+				}
+				global = false;
+			}
 		}
 	});
 	*/
@@ -135,20 +155,26 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	{
 		auto style = Bhop::style::GetStyleInfo(player->styleServices[i]);
 		this->styles.push_back({player->styleServices[i]->GetStyleShortName(), style.md5});
-		if (style.databaseID < 0)
+		if (style.databaseID < 0 || style.databaseID >= 64)
 		{
 			this->local = false;
+			continue;
 		}
 		this->styleIDs |= (1ull << style.databaseID);
 	}
 
 	// Metadata
 	this->metadata = player->timerService->GetCurrentRunMetadata().Get();
+}
 
+void RunSubmission::Start()
+{
 	// Previous GPBs
 	if (global)
 	{
-		auto pbData = player->timerService->GetGlobalCachedPB(player->timerService->GetCourse(), mode.id);
+		const BhopCourseDescriptor *currentCourse = Bhop::course::GetCourse(this->course.name.c_str(), false);
+		BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(userID);
+		const PBData *pbData = currentCourse && player ? player->timerService->GetGlobalCachedPB(currentCourse, this->mode.pluginID) : nullptr;
 		if (pbData)
 		{
 			this->oldGPB.overall.time = pbData->overall.pbTime;
@@ -168,8 +194,8 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	}
 	else if (local)
 	{
-		// No global UUID to wait for; insert now with the locally-generated UUID.
-		SubmitLocal(localUUID.ToString().c_str());
+		// No global UUID to wait for; insert now if the course already has a local DB ID.
+		TryFinalize();
 	}
 }
 
@@ -237,6 +263,16 @@ void RunSubmission::TryFinalize()
 	const f64 now = g_pBhopUtils->GetServerGlobals()->realtime;
 	const bool timeoutReached = now >= (timestamp + RunSubmission::timeout);
 
+	if (local && !localSubmitted && !TryResolveLocalCourseID())
+	{
+		if (!timeoutReached)
+		{
+			return;
+		}
+
+		local = false;
+	}
+
 	// For global runs that haven't heard back from the API yet:
 	// keep waiting unless we've timed out or the run was only queued (offline).
 	if (global && !apiResponseReceived && !timeoutReached && !pendingQueuedSubmission)
@@ -267,6 +303,25 @@ void RunSubmission::TryFinalize()
 		BhopGlobalService::QueueReplayUpload(finalUUID, std::vector<char>(replayBuffer));
 	}
 	*/
+}
+
+bool RunSubmission::TryResolveLocalCourseID()
+{
+	if (this->course.localID > 0)
+	{
+		this->waitingForLocalCourseID = false;
+		return true;
+	}
+
+	const BhopCourseDescriptor *course = Bhop::course::GetCourse(this->course.name.c_str(), false);
+	if (!course || course->localDatabaseID <= 0)
+	{
+		return false;
+	}
+
+	this->course.localID = course->localDatabaseID;
+	this->waitingForLocalCourseID = false;
+	return true;
 }
 
 // ---------------------------------------------------------------------------

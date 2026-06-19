@@ -278,7 +278,7 @@ class BhopModeManager
 public:
 	struct ModePluginInfo
 	{
-		// ID 0 is reserved for VNL
+		// ID 0 is reserved for the built-in mode.
 		// -1 is for mode that exists in the database (but not loaded in the plugin)
 		// -2 is for invalid mode.
 		PluginId id = -2;

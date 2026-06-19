@@ -209,21 +209,39 @@ static_function void Mapi_LoadFakeZoneTriggerAliases(const char *path)
 	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeEndTriggerNames, json, "endTriggers");
 }
 
-static_function bool Mapi_ExportFakeZoneConfig(char *relativePath, size_t relativePathSize)
+enum class FakeZoneExportResult
+{
+	Success,
+	NoMapName,
+	OfficialMappingApi,
+	NoDetectedPair,
+	WriteFailed,
+};
+
+static_function FakeZoneExportResult Mapi_ExportFakeZoneConfig(char *relativePath, size_t relativePathSize)
 {
 	bool hasMapName = false;
 	CUtlString currentMap = g_pBhopUtils->GetCurrentMapName(&hasMapName);
-	if (!hasMapName || g_mappingApi.mapApiVersion != BHOP_NO_MAPAPI_VERSION)
+	if (!hasMapName)
 	{
-		return false;
+		return FakeZoneExportResult::NoMapName;
+	}
+	if (g_mappingApi.mapApiVersion != BHOP_NO_MAPAPI_VERSION)
+	{
+		return FakeZoneExportResult::OfficialMappingApi;
 	}
 
 	if (g_mappingApi.detectedFakeStartTriggerNames.Count() <= 0 || g_mappingApi.detectedFakeEndTriggerNames.Count() <= 0)
 	{
-		return false;
+		return FakeZoneExportResult::NoDetectedPair;
 	}
 
 	nlohmann::json json;
+	json["schema"] = "cs2bhop.fake-zones";
+	json["schemaVersion"] = 1;
+	json["map"] = currentMap.Get();
+	json["source"] = "trigger_multiple.targetname";
+	json["compatibility"] = {{"sharpTimerTriggerAliases", true}, {"coordinateBoxes", false}, {"officialMappingApi", false}};
 	Mapi_AddZoneExportKeys(json, "MapStartTrigger", "MapStartTriggers", g_mappingApi.detectedFakeStartTriggerNames);
 	Mapi_AddZoneExportKeys(json, "MapEndTrigger", "MapEndTriggers", g_mappingApi.detectedFakeEndTriggerNames);
 
@@ -237,7 +255,7 @@ static_function bool Mapi_ExportFakeZoneConfig(char *relativePath, size_t relati
 	{
 		V_snprintf(relativePath, relativePathSize, "%s", path);
 	}
-	return utils::WriteBufferToFile(path, buffer);
+	return utils::WriteBufferToFile(path, buffer) ? FakeZoneExportResult::Success : FakeZoneExportResult::WriteFailed;
 }
 
 static_function void Mapi_LoadFakeZoneConfig()
@@ -546,96 +564,105 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				}
 
 				// STAGE HOOK
-				std::regex stagePattern(R"(^(?:s|stage)([1-9][0-9]?)_start$)");
 				std::smatch match;
-				int stageNum = 0;
-
-				if (std::regex_search(name, match, stagePattern))
+				if (trigger.type == BHOPTRIGGER_DISABLED)
 				{
-					stageNum = std::stoi(match.str(1));
-				}
+					static const std::regex stagePattern(R"(^(?:s|stage)([1-9][0-9]?)_start$)");
+					int stageNum = 0;
 
-				if (stageNum != 0)
-				{
-					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), BHOP_NO_MAPAPI_COURSE_DESCRIPTOR);
-
-					if (stageNum == 1)
+					if (std::regex_search(name, match, stagePattern))
 					{
-						trigger.type = BHOPTRIGGER_ZONE_START;
-						trigger.zone.number = 1;
+						stageNum = std::stoi(match.str(1));
 					}
-					else
+
+					if (stageNum != 0)
 					{
-						trigger.type = BHOPTRIGGER_ZONE_STAGE;
-						trigger.zone.number = stageNum;
+						snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), BHOP_NO_MAPAPI_COURSE_DESCRIPTOR);
+
+						if (stageNum == 1)
+						{
+							trigger.type = BHOPTRIGGER_ZONE_START;
+							trigger.zone.number = 1;
+						}
+						else
+						{
+							trigger.type = BHOPTRIGGER_ZONE_STAGE;
+							trigger.zone.number = stageNum;
+						}
 					}
 				}
 
 				// CHECKPOINT HOOK
-				std::regex cpPattern(R"(^(?:map_cp|map_checkpoint)([1-9][0-9]?)$)");
-				int cpNum = 0;
-
-				if (std::regex_search(name, match, cpPattern))
+				if (trigger.type == BHOPTRIGGER_DISABLED)
 				{
-					cpNum = std::stoi(match.str(1));
-					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), BHOP_NO_MAPAPI_COURSE_DESCRIPTOR);
-					trigger.type = BHOPTRIGGER_ZONE_CHECKPOINT;
-					trigger.zone.number = cpNum;
+					static const std::regex cpPattern(R"(^(?:map_cp|map_checkpoint)([1-9][0-9]?)$)");
+					int cpNum = 0;
+
+					if (std::regex_search(name, match, cpPattern))
+					{
+						cpNum = std::stoi(match.str(1));
+						snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), BHOP_NO_MAPAPI_COURSE_DESCRIPTOR);
+						trigger.type = BHOPTRIGGER_ZONE_CHECKPOINT;
+						trigger.zone.number = cpNum;
+					}
 				}
 
 				// BONUS HOOK
-				char bonusDescriptor[128] {};
-				bool isBonusStart = false;
-				bool isBonusEnd = false;
-				bool isBonusCheckpoint = false;
-
-				std::regex bStartPattern(R"(^(?:b|bonus)([1-9][0-9]?)_start$|^timer_bonus([1-9][0-9]?)_startzone$)");
-				std::regex bEndPattern(R"(^(?:b|bonus)([1-9][0-9]?)_end$|^timer_bonus([1-9][0-9]?)_endzone$)");
-				std::regex bCpPattern(R"(^bonus_cp([1-9][0-9]?)$|^bonus_checkpoint([1-9][0-9]?)$)");
-				int bonusNum = 0;
-				int bonusCheckpointNum = 0;
-
-				if (std::regex_search(name, match, bStartPattern))
+				if (trigger.type == BHOPTRIGGER_DISABLED)
 				{
-					std::string bonusText = match.str(1).empty() ? match.str(2) : match.str(1);
-					bonusNum = std::stoi(bonusText);
-					Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
+					char bonusDescriptor[128] {};
+					bool isBonusStart = false;
+					bool isBonusEnd = false;
+					bool isBonusCheckpoint = false;
 
-					isBonusStart = true;
-				}
+					static const std::regex bStartPattern(R"(^(?:b|bonus)([1-9][0-9]?)_start$|^timer_bonus([1-9][0-9]?)_startzone$)");
+					static const std::regex bEndPattern(R"(^(?:b|bonus)([1-9][0-9]?)_end$|^timer_bonus([1-9][0-9]?)_endzone$)");
+					static const std::regex bCpPattern(R"(^bonus_cp([1-9][0-9]?)$|^bonus_checkpoint([1-9][0-9]?)$)");
+					int bonusNum = 0;
+					int bonusCheckpointNum = 0;
 
-				if (std::regex_search(name, match, bEndPattern))
-				{
-					std::string bonusText = match.str(1).empty() ? match.str(2) : match.str(1);
-					bonusNum = std::stoi(bonusText);
-					Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
+					if (std::regex_search(name, match, bStartPattern))
+					{
+						std::string bonusText = match.str(1).empty() ? match.str(2) : match.str(1);
+						bonusNum = std::stoi(bonusText);
+						Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
 
-					isBonusEnd = true;
-				}
+						isBonusStart = true;
+					}
 
-				if (std::regex_search(name, match, bCpPattern))
-				{
-					std::string cpText = match.str(1).empty() ? match.str(2) : match.str(1);
-					bonusNum = 1;
-					bonusCheckpointNum = std::stoi(cpText);
-					Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
+					if (std::regex_search(name, match, bEndPattern))
+					{
+						std::string bonusText = match.str(1).empty() ? match.str(2) : match.str(1);
+						bonusNum = std::stoi(bonusText);
+						Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
 
-					isBonusCheckpoint = true;
-				}
+						isBonusEnd = true;
+					}
 
-				if (isBonusStart || isBonusEnd)
-				{
-					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), "%s", bonusDescriptor);
-					trigger.type = isBonusStart ? BHOPTRIGGER_ZONE_BONUS_START : BHOPTRIGGER_ZONE_BONUS_END;
-					trigger.zone.bonus = bonusNum;
-				}
+					if (std::regex_search(name, match, bCpPattern))
+					{
+						std::string cpText = match.str(1).empty() ? match.str(2) : match.str(1);
+						bonusNum = 1;
+						bonusCheckpointNum = std::stoi(cpText);
+						Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
 
-				if (isBonusCheckpoint)
-				{
-					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), "%s", bonusDescriptor);
-					trigger.type = BHOPTRIGGER_ZONE_CHECKPOINT;
-					trigger.zone.bonus = bonusNum;
-					trigger.zone.number = bonusCheckpointNum;
+						isBonusCheckpoint = true;
+					}
+
+					if (isBonusStart || isBonusEnd)
+					{
+						snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), "%s", bonusDescriptor);
+						trigger.type = isBonusStart ? BHOPTRIGGER_ZONE_BONUS_START : BHOPTRIGGER_ZONE_BONUS_END;
+						trigger.zone.bonus = bonusNum;
+					}
+
+					if (isBonusCheckpoint)
+					{
+						snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), "%s", bonusDescriptor);
+						trigger.type = BHOPTRIGGER_ZONE_CHECKPOINT;
+						trigger.zone.bonus = bonusNum;
+						trigger.zone.number = bonusCheckpointNum;
+					}
 				}
 			}
 			break;
@@ -648,6 +675,11 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 			return;
 		}
 		break;
+	}
+
+	if (trigger.type == BHOPTRIGGER_DISABLED)
+	{
+		return;
 	}
 
 	g_mappingApi.triggers.AddToTail(trigger);
@@ -1049,8 +1081,6 @@ void Bhop::mapapi::OnRoundPreStart()
 
 void Bhop::mapapi::OnRoundStart()
 {
-	Bhop::course::SetupLocalCourses();
-
 	g_mappingApi.roundIsStarting = false;
 	FOR_EACH_VEC(g_mappingApi.courseDescriptors, courseInd)
 	{
@@ -1116,6 +1146,12 @@ void Bhop::mapapi::OnRoundStart()
 
 					if (trigger->type == BHOPTRIGGER_ZONE_STAGE)
 					{
+						if (trigger->zone.number < 1 || trigger->zone.number >= BHOP_MAX_STAGE_ZONES)
+						{
+							Mapi_Error("Course \"%s\" Stage zone has invalid number %d!", courseDescriptor->name, trigger->zone.number);
+							invalid = true;
+							break;
+						}
 						stageXor ^= (++stageCount) ^ trigger->zone.number;
 						break;
 					}
@@ -1130,7 +1166,7 @@ void Bhop::mapapi::OnRoundStart()
 				{
 					i32 num = trigger->zone.number;
 					cpTriggerCount++;
-					if (num < 1 || num > BHOP_MAX_CHECKPOINT_ZONES)
+					if (num < 1 || num >= BHOP_MAX_CHECKPOINT_ZONES)
 					{
 						Mapi_Error("Course \"%s\" Checkpoint zone has invalid number %d!", courseDescriptor->name, num);
 						invalid = true;
@@ -1197,6 +1233,8 @@ void Bhop::mapapi::OnRoundStart()
 		courseDescriptor->checkpointCount = maxCpNum;
 		courseDescriptor->stageCount = stageCount;
 	}
+
+	Bhop::course::SetupLocalCourses();
 }
 
 void Bhop::mapapi::CheckEndTimerTrigger(CBaseTrigger *trigger)
@@ -1465,15 +1503,39 @@ SCMD(bhop_courses, SCFL_MAP)
 SCMD(bhop_zoneexport, SCFL_MAP)
 {
 	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
-	char relativePath[1024];
-	if (!Mapi_ExportFakeZoneConfig(relativePath, sizeof(relativePath)))
+	char relativePath[1024] {};
+	FakeZoneExportResult result = Mapi_ExportFakeZoneConfig(relativePath, sizeof(relativePath));
+	switch (result)
 	{
-		player->PrintChat(true, false, "No fake start/end trigger pair was detected for this map.");
-		return MRES_SUPERCEDE;
+		case FakeZoneExportResult::Success:
+		{
+			player->PrintChat(true, false, "Saved fake zone trigger aliases to %s.", relativePath);
+			player->PrintConsole(false, false, "Saved fake zone trigger aliases to %s.", relativePath);
+			return MRES_SUPERCEDE;
+		}
+		case FakeZoneExportResult::NoMapName:
+		{
+			player->PrintChat(true, false, "Could not save fake zone aliases because the current map name is unavailable.");
+			return MRES_SUPERCEDE;
+		}
+		case FakeZoneExportResult::OfficialMappingApi:
+		{
+			player->PrintChat(true, false, "This map uses the official Mapping API, so fake zone aliases are not exported.");
+			return MRES_SUPERCEDE;
+		}
+		case FakeZoneExportResult::NoDetectedPair:
+		{
+			player->PrintChat(true, false, "No fake start/end trigger pair was detected for this map.");
+			return MRES_SUPERCEDE;
+		}
+		case FakeZoneExportResult::WriteFailed:
+		{
+			player->PrintChat(true, false, "Failed to write fake zone aliases to %s.", relativePath);
+			player->PrintConsole(false, false, "Failed to write fake zone aliases to %s.", relativePath);
+			return MRES_SUPERCEDE;
+		}
 	}
 
-	player->PrintChat(true, false, "Saved fake zone trigger aliases to %s.", relativePath);
-	player->PrintConsole(false, false, "Saved fake zone trigger aliases to %s.", relativePath);
 	return MRES_SUPERCEDE;
 }
 

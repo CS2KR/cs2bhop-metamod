@@ -155,7 +155,7 @@ struct TopRecordRequest : public BaseRequest
 		char standardTime[32];
 		utils::FormatTime(wrData.runTime, standardTime, sizeof(standardTime));
 
-		// Global Records on bhop_map (Main) [VNL]
+		// Global Records on bhop_map (Main) [128tick]
 		player->languageService->PrintChat(true, false, "WR Header", mapName.Get(), courseName.Get(), modeName.Get());
 		if (!wrData.hasRecord)
 		{
@@ -176,7 +176,7 @@ struct TopRecordRequest : public BaseRequest
 		char standardTime[32];
 		utils::FormatTime(srData.runTime, standardTime, sizeof(standardTime));
 
-		// Server Records on bhop_map (Main) [VNL]
+		// Server Records on bhop_map (Main) [128tick]
 		player->languageService->PrintChat(true, false, "SR Header", mapName.Get(), courseName.Get(), modeName.Get());
 		if (!srData.hasRecord)
 		{

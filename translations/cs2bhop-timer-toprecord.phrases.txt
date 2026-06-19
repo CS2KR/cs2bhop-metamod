@@ -2,7 +2,7 @@
 {
 	"SR Header"
 	{
-		// Server Records on bhop_map (Main) [VNL]
+		// Server Records on bhop_map (Main) [128tick]
 		"#format"	"map_name:s,course_name:s,mode_name:s"
 		"en"		"{grey}Server Records on {default}{map_name}{grey} ({default}{course_name}{grey}) [{purple}{mode_name}{grey}]"
 		"chi"		"{grey}Server Records on {default}{map_name}{grey} ({default}{course_name}{grey}) [{purple}{mode_name}{grey}]"
@@ -21,7 +21,7 @@
 	}
 	"WR Header"
 	{
-		// Global Records on bhop_map (Main) [VNL]
+		// Global Records on bhop_map (Main) [128tick]
 		"#format"	"{grey}Server Records on {default}{map_name}{grey} ({default}{course_name}{grey}) [{purple}{mode_name}{grey}]"
 		"en"		"{grey}Global Records on {default}{map_name}{grey} ({default}{course_name}{grey}) [{purple}{mode_name}{grey}]"
 		"chi"		"{grey}Global Records on {default}{map_name}{grey} ({default}{course_name}{grey}) [{purple}{mode_name}{grey}]"

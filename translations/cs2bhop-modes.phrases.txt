@@ -35,7 +35,7 @@
 	}
 	"Mode Not Available"
 	{
-		// The Vanilla mode is currently not available.
+		// The CSS66 mode is currently not available.
 		"#format"	"Possible modes: (Current mode is {mode})"
 		"en"		"{grey}The {purple}{mode} {grey}mode is currently not available."
 		"chi"		"{grey}The {purple}{mode} {grey}mode is currently not available."
@@ -54,7 +54,7 @@
 	}
 	"Switched Mode"
 	{
-		// You have switched to the Vanilla mode.
+		// You have switched to the 128tick mode.
 		"#format"	"{grey}The {purple}{mode} {grey}mode is currently not available."
 		"en"		"{grey}You have switched to the {purple}{mode} {grey}mode."
 		"chi"		"{grey}You have switched to the {purple}{mode} {grey}mode."
