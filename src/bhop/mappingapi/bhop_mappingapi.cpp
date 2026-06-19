@@ -256,7 +256,7 @@ static_function bool Mapi_IsFakeStartZoneName(const std::string &name)
 	{
 		return true;
 	}
-	static const std::regex stage1Pattern(R"(^(?:s|stage)0?1_start$)", std::regex_constants::icase);
+	static const std::regex stage1Pattern(R"(^(?:s|stage)1_start$)", std::regex_constants::icase);
 	return std::regex_match(name, stage1Pattern);
 }
 
@@ -527,7 +527,7 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				}
 
 				// STAGE HOOK
-				std::regex stagePattern(R"((?:s|stage)(\d+)_start)");
+				std::regex stagePattern(R"(^(?:s|stage)([1-9][0-9]?)_start$)");
 				std::smatch match;
 				int stageNum = 0;
 
@@ -553,7 +553,7 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				}
 
 				// CHECKPOINT HOOK
-				std::regex cpPattern(R"((?:map_cp|map_checkpoint)(\d+))");
+				std::regex cpPattern(R"(^(?:map_cp|map_checkpoint)([1-9][0-9]?)$)");
 				int cpNum = 0;
 
 				if (std::regex_search(name, match, cpPattern))
@@ -570,9 +570,9 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				bool isBonusEnd = false;
 				bool isBonusCheckpoint = false;
 
-				std::regex bStartPattern(R"(^(?:b|bonus)(\d+)_start$|^timer_bonus(\d+)_startzone$)");
-				std::regex bEndPattern(R"(^(?:b|bonus)(\d+)_end$|^timer_bonus(\d+)_endzone$)");
-				std::regex bCpPattern(R"(^bonus_cp(\d+)$|^bonus_checkpoint(\d+)$)");
+				std::regex bStartPattern(R"(^(?:b|bonus)([1-9][0-9]?)_start$|^timer_bonus([1-9][0-9]?)_startzone$)");
+				std::regex bEndPattern(R"(^(?:b|bonus)([1-9][0-9]?)_end$|^timer_bonus([1-9][0-9]?)_endzone$)");
+				std::regex bCpPattern(R"(^bonus_cp([1-9][0-9]?)$|^bonus_checkpoint([1-9][0-9]?)$)");
 				int bonusNum = 0;
 				int bonusCheckpointNum = 0;
 
