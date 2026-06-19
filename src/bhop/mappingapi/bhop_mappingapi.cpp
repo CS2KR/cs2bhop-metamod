@@ -316,6 +316,27 @@ static_function bool Mapi_CreateCourse(i32 courseNumber = 1, const char *courseN
 	return true;
 }
 
+static_function bool Mapi_EnsureFakeBonusCourse(i32 bonusNumber, char *bonusDescriptor, size_t bonusDescriptorSize)
+{
+	if (bonusNumber <= 0)
+	{
+		return false;
+	}
+
+	V_snprintf(bonusDescriptor, bonusDescriptorSize, "B%d", bonusNumber);
+	FOR_EACH_VEC(g_mappingApi.courseDescriptors, i)
+	{
+		if (BHOP_STREQI(g_mappingApi.courseDescriptors[i].entityTargetname, bonusDescriptor))
+		{
+			return true;
+		}
+	}
+
+	char bonusName[128];
+	V_snprintf(bonusName, sizeof(bonusName), "B%d", bonusNumber);
+	return Mapi_CreateCourse(bonusNumber + 1, bonusName, -200000 - bonusNumber, bonusDescriptor, g_mapCfgMaxVelocity);
+}
+
 // Example keyvalues:
 /*
 	timer_anti_bhop_time: 0.2
@@ -522,24 +543,22 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				}
 
 				// BONUS HOOK
-				std::string bonusName = "B";
-				char bonusDescriptor[128];
+				char bonusDescriptor[128] {};
 				bool isBonusStart = false;
 				bool isBonusEnd = false;
+				bool isBonusCheckpoint = false;
 
 				std::regex bStartPattern(R"(^(?:b|bonus)(\d+)_start$|^timer_bonus(\d+)_startzone$)");
 				std::regex bEndPattern(R"(^(?:b|bonus)(\d+)_end$|^timer_bonus(\d+)_endzone$)");
+				std::regex bCpPattern(R"(^bonus_cp(\d+)$|^bonus_checkpoint(\d+)$)");
 				int bonusNum = 0;
+				int bonusCheckpointNum = 0;
 
 				if (std::regex_search(name, match, bStartPattern))
 				{
 					std::string bonusText = match.str(1).empty() ? match.str(2) : match.str(1);
 					bonusNum = std::stoi(bonusText);
-					bonusName.append(bonusText);
-
-					snprintf(bonusDescriptor, sizeof(bonusDescriptor), "B%d", bonusNum);
-					Mapi_CreateCourse(bonusNum + 1, bonusName.c_str(), g_mappingApi.courseDescriptors.Count() + 1, bonusDescriptor,
-									  g_mapCfgMaxVelocity);
+					Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
 
 					isBonusStart = true;
 				}
@@ -548,9 +567,19 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				{
 					std::string bonusText = match.str(1).empty() ? match.str(2) : match.str(1);
 					bonusNum = std::stoi(bonusText);
-					snprintf(bonusDescriptor, sizeof(bonusDescriptor), "B%d", bonusNum);
+					Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
 
 					isBonusEnd = true;
+				}
+
+				if (std::regex_search(name, match, bCpPattern))
+				{
+					std::string cpText = match.str(1).empty() ? match.str(2) : match.str(1);
+					bonusNum = 1;
+					bonusCheckpointNum = std::stoi(cpText);
+					Mapi_EnsureFakeBonusCourse(bonusNum, bonusDescriptor, sizeof(bonusDescriptor));
+
+					isBonusCheckpoint = true;
 				}
 
 				if (isBonusStart || isBonusEnd)
@@ -558,6 +587,14 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), "%s", bonusDescriptor);
 					trigger.type = isBonusStart ? BHOPTRIGGER_ZONE_BONUS_START : BHOPTRIGGER_ZONE_BONUS_END;
 					trigger.zone.bonus = bonusNum;
+				}
+
+				if (isBonusCheckpoint)
+				{
+					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), "%s", bonusDescriptor);
+					trigger.type = BHOPTRIGGER_ZONE_CHECKPOINT;
+					trigger.zone.bonus = bonusNum;
+					trigger.zone.number = bonusCheckpointNum;
 				}
 			}
 			break;

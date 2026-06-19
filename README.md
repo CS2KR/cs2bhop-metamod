@@ -14,7 +14,7 @@ Fake zoning is resolved from map entities. On maps without the official Mapping 
 - Start: `map_start`, `s1_start`, `stage1_start`, `timer_startzone`, `trigger_startzone`, `zone_start`
 - End: `map_end`, `timer_endzone`, `trigger_endzone`, `zone_end`
 - Bonus: `b1_start`, `bonus1_start`, `timer_bonus1_startzone`, and matching end names
-- Checkpoints/stages: `map_cp1`, `map_checkpoint1`, `s2_start`, `stage2_start`
+- Checkpoints/stages: `map_cp1`, `map_checkpoint1`, `bonus_cp1`, `bonus_checkpoint1`, `s2_start`, `stage2_start`
 
 Per-map trigger aliases can be shared in `addons/cs2bhop/zones/<map>.json`:
 
