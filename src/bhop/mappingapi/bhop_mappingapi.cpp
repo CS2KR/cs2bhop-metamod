@@ -751,16 +751,34 @@ static_function BhopCourseDescriptor *Mapi_FindCourse(const char *targetname)
 	return result;
 }
 
-static_function bool Mapi_SetStartPosition(const char *descriptorName, Vector origin, QAngle angles)
+static_function bool Mapi_FindStartPositionForTrigger(const BhopTrigger *trigger, Vector &originDest, QAngle &anglesDest)
 {
-	BhopCourseDescriptor *desc = Mapi_FindCourse(descriptorName);
-
-	if (!desc)
+	if (!trigger)
 	{
 		return false;
 	}
-	desc->SetStartPosition(origin, angles);
-	return true;
+
+	Vector mins = trigger->mins + trigger->origin;
+	Vector maxs = trigger->maxs + trigger->origin;
+
+	FOR_EACH_VEC(g_mappingApi.triggers, i)
+	{
+		const BhopTrigger *destination = &g_mappingApi.triggers[i];
+		if (destination->type != BHOPTRIGGER_DESTINATION)
+		{
+			continue;
+		}
+
+		if (utils::IsVectorInBox(destination->origin, mins, maxs))
+		{
+			originDest = destination->origin;
+			anglesDest = destination->rotation;
+			return true;
+		}
+	}
+
+	CBaseTrigger *entity = reinterpret_cast<CBaseTrigger *>(trigger->entity.Get());
+	return utils::FindValidPositionForTrigger(entity, originDest, anglesDest);
 }
 
 static_function void Mapi_OnInfoTeleportDestinationSpawn(const EntitySpawnInfo_t *info)
@@ -1129,6 +1147,26 @@ void Bhop::mapapi::OnRoundStart()
 		{
 			Mapi_Error("Course \"%s\" Too many stage zones! Maximum is %i.", courseDescriptor->name, BHOP_MAX_STAGE_ZONES);
 			invalid = true;
+		}
+
+		FOR_EACH_VEC(g_mappingApi.triggers, i)
+		{
+			BhopTrigger *trigger = &g_mappingApi.triggers[i];
+			if (trigger->type != BHOPTRIGGER_ZONE_START && trigger->type != BHOPTRIGGER_ZONE_BONUS_START)
+			{
+				continue;
+			}
+			if (!BHOP_STREQ(trigger->zone.courseDescriptor, courseDescriptor->entityTargetname))
+			{
+				continue;
+			}
+
+			Vector startPosition;
+			QAngle startAngles;
+			if (Mapi_FindStartPositionForTrigger(trigger, startPosition, startAngles))
+			{
+				courseDescriptor->SetStartPosition(startPosition, startAngles);
+			}
 		}
 
 		if (invalid)
