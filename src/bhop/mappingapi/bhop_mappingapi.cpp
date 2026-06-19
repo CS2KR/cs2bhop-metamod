@@ -117,6 +117,13 @@ static_function bool Mapi_HasConfiguredTriggerName(const CUtlVector<CUtlString> 
 	return false;
 }
 
+static_function std::string Mapi_NormalizeTriggerName(const char *name)
+{
+	std::string normalized(name ? name : "");
+	std::transform(normalized.begin(), normalized.end(), normalized.begin(), [](unsigned char c) { return std::tolower(c); });
+	return normalized;
+}
+
 static_function void Mapi_AddUniqueTriggerName(CUtlVector<CUtlString> &names, const char *name)
 {
 	if (!name || !name[0] || Mapi_HasConfiguredTriggerName(names, name))
@@ -507,9 +514,12 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 			// Check for pre-mapping api triggers for backwards compatibility.
 			if (g_mappingApi.mapApiVersion == BHOP_NO_MAPAPI_VERSION)
 			{
-				CUtlString triggerName = info->m_pEntity->m_name.String();
-				std::string name(triggerName.Get());
-				std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return std::tolower(c); });
+				std::string name = Mapi_NormalizeTriggerName(ekv->GetString("targetname", ""));
+				if (name.empty())
+				{
+					CUtlString triggerName = info->m_pEntity->m_name.String();
+					name = Mapi_NormalizeTriggerName(triggerName.Get());
+				}
 
 				// START/END HOOKS
 				if (Mapi_IsFakeStartZoneName(name) || Mapi_IsFakeEndZoneName(name))
