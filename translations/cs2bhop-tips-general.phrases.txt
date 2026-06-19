@@ -21,8 +21,8 @@
 	}
 	"Tip - bhop_mode"
 	{
-		"en"	"{grey}You can switch to a mode by typing its abbreviation. For example, type {default}/128t{grey} to switch to the {purple}128tick {grey}mode or {default}/css66 {grey}to switch to the {purple}CSS66 {grey}mode."
-		"pt"	"{grey}Voc챗 pode alternar para um modo digitando sua abrevia챌찾o. Por exemplo, digite {default}/128t{grey} para alternar para o modo {purple}128tick {grey} ou {default}/css66 {grey} para alternar para o modo {purple}CSS66 {grey}."
+		"en"	"{grey}You can switch to a mode by typing its abbreviation. For example, type {default}/128t{grey} to switch to the {purple}128tick {grey}mode or {default}/css {grey}to switch to the {purple}CSS {grey}mode."
+		"pt"	"{grey}Voc챗 pode alternar para um modo digitando sua abrevia챌찾o. Por exemplo, digite {default}/128t{grey} para alternar para o modo {purple}128tick {grey} ou {default}/css {grey} para alternar para o modo {purple}CSS {grey}."
 	}
 	"Tip - bhop_restart"
 	{

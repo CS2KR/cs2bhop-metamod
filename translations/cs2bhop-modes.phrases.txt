@@ -35,7 +35,7 @@
 	}
 	"Mode Not Available"
 	{
-		// The CSS66 mode is currently not available.
+		// The CSS mode is currently not available.
 		"#format"	"Possible modes: (Current mode is {mode})"
 		"en"		"{grey}The {purple}{mode} {grey}mode is currently not available."
 		"chi"		"{grey}The {purple}{mode} {grey}mode is currently not available."

@@ -424,7 +424,7 @@ BhopModeManager::ModePluginInfo Bhop::mode::GetModeInfo(Bhop::API::Mode mode)
 		}
 		case Bhop::API::Mode::CSS66:
 		{
-			return Bhop::mode::GetModeInfo("CSS66tick");
+			return Bhop::mode::GetModeInfo("CSS");
 		}
 	}
 	return BhopModeManager::ModePluginInfo();

@@ -20,7 +20,7 @@ public:
 
 	const char *GetName()
 	{
-		return "CS2Bhop-Mode-CSS66";
+		return "CS2Bhop-Mode-CSS";
 	}
 
 	const char *GetDescription()

@@ -1,7 +1,7 @@
 #include "bhop_mode_source.h"
 
-#define MODE_NAME_SHORT "CSS66"
-#define MODE_NAME       "CSS66tick"
+#define MODE_NAME_SHORT "CSS"
+#define MODE_NAME       "CSS"
 
 BhopSourceModePlugin g_BhopSourceModePlugin;
 

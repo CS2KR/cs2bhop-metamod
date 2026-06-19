@@ -814,10 +814,10 @@
 		"en"		"Switch to 128tick mode."
 		"pt"		"Alterar para o modo 128tick."
 	}
-	"Command Description - bhop_CSS66"
+	"Command Description - bhop_CSS"
 	{
-		"en"		"Switch to CSS66tick mode."
-		"pt"		"Alterar para o modo CSS66tick."
+		"en"		"Switch to CSS mode."
+		"pt"		"Alterar para o modo CSS."
 	}
 	"Command Description - bhop_pb"
 	{

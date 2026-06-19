@@ -8,7 +8,7 @@ bool Bhop::API::DecodeModeString(std::string_view modeString, Mode &mode)
 		mode = Mode::_128tick;
 		return true;
 	}
-	else if (BHOP_STREQI(modeString.data(), "css66tick") || BHOP_STREQI(modeString.data(), "css66") || BHOP_STREQI(modeString.data(), "css"))
+	else if (BHOP_STREQI(modeString.data(), "css") || BHOP_STREQI(modeString.data(), "css66tick") || BHOP_STREQI(modeString.data(), "css66"))
 	{
 		mode = Mode::CSS66;
 		return true;
@@ -173,7 +173,7 @@ bool Bhop::API::Map::Course::FromJson(const Json &json)
 bool Bhop::API::Map::Course::Filters::FromJson(const Json &json)
 {
 	bool success = json.Get("128tick", this->_128tick);
-	json.Get("CSS66tick", this->css66);
+	json.Get("CSS", this->css66) || json.Get("CSS66tick", this->css66);
 	return success;
 }
 

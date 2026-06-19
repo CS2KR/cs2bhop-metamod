@@ -5,7 +5,7 @@ Metamod plugin for CS2 bhop servers, based on `cs2surf-metamod`.
 ## Movement Modes
 
 - `128tick` is the built-in default bhop mode.
-- `CSS66tick` is packaged as an optional mode plugin under `addons/cs2bhop/modes`.
+- `CSS` is packaged as an optional mode plugin under `addons/cs2bhop/modes`.
 - No style plugins are packaged by default. The style loader remains available for later external style plugins under `addons/cs2bhop/styles`.
 
 ## Fake Zoning

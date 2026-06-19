@@ -53,7 +53,7 @@
 	"HUD - Speed Text"
 	{
 		// Speed: 234
-		"#format"	" (PAUSED)"
+		"#format"	"speed:.0f"
 		"en"		"Speed: {speed}"
 		"chi"		"Speed: {speed}"
 		"pl"		"Speed: {speed}"
@@ -71,7 +71,7 @@
 	"HUD - Speed Text (Takeoff)"
 	{
 		// Speed: 234 (200)
-		"#format"	"Speed: {speed}"
+		"#format"	"speed:.0f,takeoff_speed:.0f"
 		"en"		"Speed: {speed} ({takeoff_speed})"
 		"chi"		"Speed: {speed} ({takeoff_speed})"
 		"pl"		"Speed: {speed} ({takeoff_speed})"
@@ -89,7 +89,7 @@
 	"HUD - Key Text"
 	{
 		// Keys: A W S D C J
-		"#format"	"Speed: {speed} ({takeoff_speed})"
+		"#format"	"left:c,forward:c,back:c,right:c,duck:c,jump:c"
 		"en"		"Keys: {left} {forward} {back} {right} {duck} {jump}"
 		"chi"		"Keys: {left} {forward} {back} {right} {duck} {jump}"
 		"pl"		"Keys: {left} {forward} {back} {right} {duck} {jump}"
@@ -107,7 +107,7 @@
 	"HUD - Timer Text"
 	{
 		// 01:23:45 (STOPPED) (PAUSED)
-		"#format"	"Keys: {left} {forward} {back} {right} {duck} {jump}"
+		"#format"	"time:s,stop_text:s,pause_text:s"
 		"en"		"{time}{stop_text}{pause_text}"
 		"chi"		"{time}{stop_text}{pause_text}"
 		"pl"		"{time}{stop_text}{pause_text}"
@@ -125,7 +125,7 @@
 	"HUD - Stage Text"
 	{
 		// Stage X
-		"#format"	"{time}{stop_text}{pause_text}"
+		"#format"	"stage:s"
 		"en"		"Stage {stage}"
 		"chi"		"Stage {stage}"
 		"pl"		"Stage {stage}"
@@ -144,7 +144,7 @@
 	{
 		// Stage X
 		// 01:23:45 (STOPPED) (PAUSED)
-		"#format"	"Stage {stage}"
+		"#format"	"key_text:s,stage_text:s,timer_text:s,speed_text:s"
 		"en"		"{stage_text}\n{timer_text}"
 		"chi"		"{stage_text}\n{timer_text}"
 		"pl"		"{stage_text}\n{timer_text}"
@@ -163,7 +163,7 @@
 	"HUD - Alert Text"
 	{
 		// Unused
-		"#format"	"{stage_text}\n{timer_text}"
+		"#format"	"key_text:s,stage_text:s,timer_text:s,speed_text:s"
 		"en"		""
 		"chi"		""
 		"pl"		""
@@ -182,7 +182,7 @@
 	{
 		// Speed: 234 (200)
 		// Keys: A W S D C J
-		"#format"	""
+		"#format"	"key_text:s,stage_text:s,timer_text:s,speed_text:s"
 		"en"		"{speed_text}<br>{key_text}"
 		"chi"		"{speed_text}<br>{key_text}"
 		"pl"		"{speed_text}<br>{key_text}"
