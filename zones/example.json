@@ -1,4 +1,6 @@
 {
   "MapStartTrigger": "custom_start_trigger_name",
-  "MapEndTrigger": "custom_end_trigger_name"
+  "MapEndTrigger": "custom_end_trigger_name",
+  "MapStartTriggers": ["alternate_start_name"],
+  "MapEndTriggers": ["alternate_end_name"]
 }

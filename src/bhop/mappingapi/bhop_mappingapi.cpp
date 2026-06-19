@@ -114,14 +114,35 @@ static_function bool Mapi_HasConfiguredTriggerName(const CUtlVector<CUtlString> 
 
 static_function void Mapi_AddConfiguredTriggerName(CUtlVector<CUtlString> &names, const nlohmann::json &json, const char *key)
 {
-	if (!json.contains(key) || !json[key].is_string())
+	if (!json.contains(key))
 	{
 		return;
 	}
-	std::string name = json[key].get<std::string>();
-	if (!name.empty())
+	const nlohmann::json &value = json[key];
+	if (value.is_string())
 	{
-		names.AddToTail(name.c_str());
+		std::string name = value.get<std::string>();
+		if (!name.empty())
+		{
+			names.AddToTail(name.c_str());
+		}
+		return;
+	}
+	if (!value.is_array())
+	{
+		return;
+	}
+	for (const nlohmann::json &entry : value)
+	{
+		if (!entry.is_string())
+		{
+			continue;
+		}
+		std::string name = entry.get<std::string>();
+		if (!name.empty())
+		{
+			names.AddToTail(name.c_str());
+		}
 	}
 }
 
@@ -153,13 +174,18 @@ static_function void Mapi_LoadFakeZoneConfig()
 
 	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeStartTriggerNames, json, "MapStartTrigger");
 	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeEndTriggerNames, json, "MapEndTrigger");
+	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeStartTriggerNames, json, "MapStartTriggers");
+	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeEndTriggerNames, json, "MapEndTriggers");
 	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeStartTriggerNames, json, "startTrigger");
 	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeEndTriggerNames, json, "endTrigger");
+	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeStartTriggerNames, json, "startTriggers");
+	Mapi_AddConfiguredTriggerName(g_mappingApi.fakeEndTriggerNames, json, "endTriggers");
 }
 
 static_function bool Mapi_IsFakeStartZoneName(const std::string &name)
 {
-	if (name == "map_start" || name == "s1_start" || name == "stage1_start" || name == "timer_startzone" || name == "zone_start")
+	if (name == "map_start" || name == "s1_start" || name == "stage1_start" || name == "timer_startzone" || name == "trigger_startzone"
+		|| name == "zone_start")
 	{
 		return true;
 	}
@@ -173,7 +199,7 @@ static_function bool Mapi_IsFakeStartZoneName(const std::string &name)
 
 static_function bool Mapi_IsFakeEndZoneName(const std::string &name)
 {
-	if (name == "map_end" || name == "timer_endzone" || name == "zone_end")
+	if (name == "map_end" || name == "timer_endzone" || name == "trigger_endzone" || name == "zone_end")
 	{
 		return true;
 	}
