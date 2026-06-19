@@ -208,6 +208,9 @@ static_function bool Mapi_ExportFakeZoneConfig(char *relativePath, size_t relati
 
 static_function void Mapi_LoadFakeZoneConfig()
 {
+	g_mappingApi.fakeStartTriggerNames.RemoveAll();
+	g_mappingApi.fakeEndTriggerNames.RemoveAll();
+
 	bool hasMapName = false;
 	CUtlString currentMap = g_pBhopUtils->GetCurrentMapName(&hasMapName);
 	if (!hasMapName)
@@ -1002,6 +1005,8 @@ void Bhop::mapapi::OnSpawn(int count, const EntitySpawnInfo_t *info)
 void Bhop::mapapi::OnRoundPreStart()
 {
 	g_mappingApi.triggers.RemoveAll();
+	g_mappingApi.detectedFakeStartTriggerNames.RemoveAll();
+	g_mappingApi.detectedFakeEndTriggerNames.RemoveAll();
 	g_mappingApi.roundIsStarting = true;
 }
 

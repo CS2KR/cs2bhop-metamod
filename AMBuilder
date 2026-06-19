@@ -119,7 +119,7 @@ def configure_main(sdk_target, sdk, cxx):
 
     os.path.join(builder.sourcePath, 'src', 'bhop', 'language', 'bhop_language.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode_manager.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode_64t.cpp'),
+    os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode_128t.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'noclip', 'bhop_noclip.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'option', 'bhop_option.cpp'),
@@ -231,126 +231,6 @@ def configure_main(sdk_target, sdk, cxx):
 
 
   return binary
-
-def configure_85t(sdk, cxx):
-  _85t_binary = MMSPlugin.HL2Library(builder, cxx, f"{MMSPlugin.metadata['name']}-mode-85t", sdk)
-
-  if _85t_binary.compiler.family == 'gcc' or _85t_binary.compiler.family == 'clang':
-    _85t_binary.compiler.defines += ['_GLIBCXX_USE_CXX11_ABI=0']
-
-  if _85t_binary.compiler.family == 'clang':
-    _85t_binary.compiler.cxxflags += ['-Wno-register', '-frtti', '-Wno-invalid-offsetof', '-Wno-parentheses']
-
-  _85t_binary.compiler.cxxincludes += [
-      os.path.join(builder.sourcePath, 'src'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2', 'public', 'entity2'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2', 'game', 'server'),
-  ]
-
-  if _85t_binary.compiler.target.platform == 'linux':
-    _85t_binary.compiler.postlink += [
-      os.path.join(sdk['path'], 'lib', 'linux64', 'mathlib.a'),
-    ] 
-    _85t_binary.sources += [
-      'src/utils/plat_linux.cpp'
-      ]
-  elif _85t_binary.compiler.target.platform == 'windows':
-    _85t_binary.compiler.postlink += [
-      os.path.join(sdk['path'], 'lib', 'public', 'win64', 'mathlib.lib'),
-    ]
-    _85t_binary.sources += [
-      'src/utils/plat_win.cpp'
-      ]
-
-  _85t_binary.sources += [
-    os.path.join(sdk['path'], 'entity2', 'entityidentity.cpp'),
-    os.path.join(sdk['path'], 'entity2', 'entitysystem.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'utils', 'schema.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'utils', 'gameconfig.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode_85t.cpp'),
-  ]
-  return _85t_binary
-  
-def configure_102t(sdk, cxx):
-  _102t_binary = MMSPlugin.HL2Library(builder, cxx, f"{MMSPlugin.metadata['name']}-mode-102t", sdk)
-
-  if _102t_binary.compiler.family == 'gcc' or _102t_binary.compiler.family == 'clang':
-    _102t_binary.compiler.defines += ['_GLIBCXX_USE_CXX11_ABI=0']
-
-  if _102t_binary.compiler.family == 'clang':
-    _102t_binary.compiler.cxxflags += ['-Wno-register', '-frtti', '-Wno-invalid-offsetof', '-Wno-parentheses']
-
-  _102t_binary.compiler.cxxincludes += [
-      os.path.join(builder.sourcePath, 'src'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2', 'public', 'entity2'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2', 'game', 'server'),
-  ]
-
-  if _102t_binary.compiler.target.platform == 'linux':
-    _102t_binary.compiler.postlink += [
-      os.path.join(sdk['path'], 'lib', 'linux64', 'mathlib.a'),
-    ] 
-    _102t_binary.sources += [
-      'src/utils/plat_linux.cpp'
-      ]
-  elif _102t_binary.compiler.target.platform == 'windows':
-    _102t_binary.compiler.postlink += [
-      os.path.join(sdk['path'], 'lib', 'public', 'win64', 'mathlib.lib'),
-    ]
-    _102t_binary.sources += [
-      'src/utils/plat_win.cpp'
-      ]
-
-  _102t_binary.sources += [
-    os.path.join(sdk['path'], 'entity2', 'entityidentity.cpp'),
-    os.path.join(sdk['path'], 'entity2', 'entitysystem.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'utils', 'schema.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'utils', 'gameconfig.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode_102t.cpp'),
-  ]
-  return _102t_binary
-
-def configure_128t(sdk, cxx):
-  _128t_binary = MMSPlugin.HL2Library(builder, cxx, f"{MMSPlugin.metadata['name']}-mode-128t", sdk)
-
-  if _128t_binary.compiler.family == 'gcc' or _128t_binary.compiler.family == 'clang':
-    _128t_binary.compiler.defines += ['_GLIBCXX_USE_CXX11_ABI=0']
-
-  if _128t_binary.compiler.family == 'clang':
-    _128t_binary.compiler.cxxflags += ['-Wno-register', '-frtti', '-Wno-invalid-offsetof', '-Wno-parentheses']
-
-  _128t_binary.compiler.cxxincludes += [
-      os.path.join(builder.sourcePath, 'src'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2', 'public', 'entity2'),
-      os.path.join(builder.sourcePath, 'hl2sdk-cs2', 'game', 'server'),
-  ]
-
-  if _128t_binary.compiler.target.platform == 'linux':
-    _128t_binary.compiler.postlink += [
-      os.path.join(sdk['path'], 'lib', 'linux64', 'mathlib.a'),
-    ] 
-    _128t_binary.sources += [
-      'src/utils/plat_linux.cpp'
-      ]
-  elif _128t_binary.compiler.target.platform == 'windows':
-    _128t_binary.compiler.postlink += [
-      os.path.join(sdk['path'], 'lib', 'public', 'win64', 'mathlib.lib'),
-    ]
-    _128t_binary.sources += [
-      'src/utils/plat_win.cpp'
-      ]
-
-  _128t_binary.sources += [
-    os.path.join(sdk['path'], 'entity2', 'entityidentity.cpp'),
-    os.path.join(sdk['path'], 'entity2', 'entitysystem.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'utils', 'schema.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'utils', 'gameconfig.cpp'),
-    os.path.join(builder.sourcePath, 'src', 'bhop', 'mode', 'bhop_mode_128t.cpp'),
-  ]
-  return _128t_binary
 
 def configure_css(sdk, cxx):
   css_binary = MMSPlugin.HL2Library(builder, cxx, f"{MMSPlugin.metadata['name']}-mode-css", sdk)

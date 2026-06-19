@@ -1,5 +1,5 @@
 #include "bhop_mode.h"
-#include "bhop_mode_64t.h"
+#include "bhop_mode_128t.h"
 
 #include "filesystem.h"
 
@@ -61,7 +61,7 @@ void Bhop::mode::InitModeManager()
 	{
 		return;
 	}
-	ModeServiceFactory _128tFactory = [](BhopPlayer *player) -> BhopModeService * { return new Bhop64tModeService(player); };
+	ModeServiceFactory _128tFactory = [](BhopPlayer *player) -> BhopModeService * { return new Bhop128tModeService(player); };
 	modeManager.RegisterMode(g_PLID, "128t", "128tick", _128tFactory);
 	BhopDatabaseService::RegisterEventListener(&databaseEventListener);
 	BhopOptionService::RegisterEventListener(&optionEventListener);
@@ -118,7 +118,7 @@ void Bhop::mode::UpdateModeDatabaseID(CUtlString name, i32 id, CUtlString shortN
 void Bhop::mode::InitModeService(BhopPlayer *player)
 {
 	delete player->modeService;
-	player->modeService = new Bhop64tModeService(player);
+	player->modeService = new Bhop128tModeService(player);
 }
 
 void Bhop::mode::DisableReplicatedModeCvars()
