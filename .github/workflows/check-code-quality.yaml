@@ -22,7 +22,7 @@ jobs:
           - check: 'src'
             exclude: 'sdk'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
       - uses: jidicula/clang-format-action@v4.13.0
         with:
           clang-format-version: '18'

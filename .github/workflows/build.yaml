@@ -12,7 +12,7 @@ jobs:
     name: Linux
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -32,7 +32,7 @@ jobs:
           docker compose up
 
       - name: Archive build
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: cs2bhop-linux
           path: ./build/package
@@ -41,7 +41,7 @@ jobs:
     name: Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
@@ -50,7 +50,7 @@ jobs:
         run: git fetch --prune --tags
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
@@ -59,7 +59,7 @@ jobs:
         run: curl https://bootstrap.pypa.io/pip/3.6/get-pip.py | python
 
       - name: Clone AMBuild
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
         with:
           repository: alliedmodders/ambuild
           path: ./ambuild
@@ -84,7 +84,7 @@ jobs:
         run: ambuild
 
       - name: Archive build
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v4
         with:
           name: cs2bhop-windows
           path: ./build/package
