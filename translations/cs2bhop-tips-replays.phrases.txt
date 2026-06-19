@@ -3,8 +3,8 @@
 	"Tip - bhop_replay"
 	{
 		"en"		"{grey}Type {default}!replay {grey}to watch the server's fastest runs."
-		"chi"		"{grey}Type {default}!replay {grey}to watch the server's fastest runs."
-		"ru"		"{grey}Type {default}!replay {grey}to watch the server's fastest runs."
+		"chi"		"{grey}在聊天框中输入 {default}!replay {grey}以观察最快纪录视角."
+		"ru"		"{grey}Напишите {default}!replay {grey}для просмотра лучшего прохождения карты на этом сервере."
 	}
 	"Tip - bhop_replays"
 	{
@@ -44,7 +44,7 @@
 	}
     "Tip - Replay Storage Policy"
     {
-	    "en"        "{grey}Older or less important replays may be automatically removed over time to free up server space. Saving new manual replays can overwrite previous ones."
+	"en"        "{grey}Older or less important replays may be automatically removed over time to free up server space. Saving new manual replays can overwrite previous ones."
     }
 	"Tip - bhop_rphidelegs"
 	{

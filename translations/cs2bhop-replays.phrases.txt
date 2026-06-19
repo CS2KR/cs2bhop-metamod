@@ -78,7 +78,7 @@
 	{
 		// Replay Type: Run
 		// Course: Main
-		// Mode + Styles: 128tick
+		// Mode: Classic*
 		// Time: 12:34.567
 		"#format"	"name:s,mode:s,time:s"
 		"en"		"Replay Type: Run\nCourse: {name}\nMode + Styles: {mode}\nTime: {time}"
@@ -169,14 +169,14 @@
 	"Replay - Manual Replay Saved"
 	{
 		"#format"	"uuid:s,duration:.0f"
-		"en"		"{grey}Replay saved: {lime}{uuid}{grey} ({lime}{duration}{grey}s)" 
+		"en"		"{grey}Replay saved: {lime}{uuid}{grey} ({lime}{duration}{grey}s)"
 	}
 	"Replay - Manual Replay Saved (Console)"
 	{
 		"#format"	"uuid:s,duration:.0f"
-		"en"		"Replay saved: {uuid} ({duration}s)" 
-		"chi"		"Replay saved: {uuid} ({duration}s)"
-		"ua"		"Replay saved: {uuid} ({duration}s)"
+		"en"		"Replay saved: {uuid} ({duration}s)"
+		"chi"		"回放已保存: {uuid} ({duration}s)"
+		"ua"		"Повтор збережено: {uuid} ({duration}с.)"
 	}
 	"Replay - Run Replay Failed"
 	{
@@ -191,8 +191,8 @@
 	{
 		"#format"	"uuid:s"
 		"en"		"Replay saved: {uuid}"
-		"chi"		"Replay saved: {uuid}"
-		"ua"		"Replay saved: {uuid}"
+		"chi"		"回放已保存: {uuid}"
+		"ua"		"Повтор збережено: {uuid}"
 	}
 	"Replay - Wrong Map"
 	{
@@ -209,12 +209,12 @@
 		"#format"	"styleName:s"
 		"en"		"{darkred}Style {default}{styleName}{darkred} is not available. Playback might be inaccurate."
 	}
-	
+
 	"Replay List - Check Console"
 	{
 		"en"		"{grey}Check console for info!"
 	}
-	
+
 	"Replay List - Usage Title"
 	{
 		// Usage: !replays [type=run/r/manual/m] [options...]
@@ -245,22 +245,22 @@
 	{
 		"en"		"{grey}No matching replays found."
 	}
-	
+
 	"Cheater Replays - Table Name"
 	{
 		"en"		"Cheater Replays"
 	}
-	
+
 	"Run Replays - Table Name"
 	{
 		"en"		"Run Replays"
 	}
-	
+
 	"Manual Replays - Table Name"
 	{
 		"en"		"Manual Replays"
 	}
-	
+
 	"Replay Table Header - Player"
 	{
 		"en"		"Player"
