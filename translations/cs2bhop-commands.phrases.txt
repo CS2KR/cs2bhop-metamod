@@ -816,8 +816,8 @@
 	}
 	"Command Description - bhop_CSS"
 	{
-		"en"		"Switch to CSS mode."
-		"pt"		"Alterar para o modo CSS."
+		"en"		"Switch to Source mode."
+		"pt"		"Alterar para o modo Source."
 	}
 	"Command Description - bhop_pb"
 	{

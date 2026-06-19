@@ -1,7 +1,7 @@
 #include "bhop_mode_source.h"
 
 #define MODE_NAME_SHORT "CSS"
-#define MODE_NAME       "CSS"
+#define MODE_NAME       "Source"
 
 BhopSourceModePlugin g_BhopSourceModePlugin;
 

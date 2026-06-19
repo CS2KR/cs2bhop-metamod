@@ -35,9 +35,6 @@ styles_json=""
 # Process modes
 for mode_lin in "$LINUX_MODES_DIR"/cs2bhop-mode-*.so; do
   mode_name=$(basename "$mode_lin" | sed -E 's/^cs2bhop-mode-(.+)\.so$/\1/')
-  if [[ "$mode_name" == "css" ]]; then
-    mode_name="CSS"
-  fi
   mode_sum_lin=$(md5sum "$mode_lin" | awk '{ print $1 }')
 
   # Find corresponding Windows mode file
