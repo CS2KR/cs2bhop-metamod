@@ -48,15 +48,11 @@ jobs:
         run: |
           cd /home/runner/artifacts/cs2bhop-linux
           tar -czvf /home/runner/releases/cs2bhop-linux-v${{ inputs.version }}.tar.gz *
-          rm ./cfg/cs2bhop-server-config.txt
-          tar -czvf /home/runner/releases/cs2bhop-linux-v${{ inputs.version }}-upgrade.tar.gz *
 
       - name: Archive Windows build
         run: |
           cd /home/runner/artifacts/cs2bhop-windows
           zip -r /home/runner/releases/cs2bhop-windows-v${{ inputs.version }}.zip *
-          rm ./cfg/cs2bhop-server-config.txt
-          zip -r /home/runner/releases/cs2bhop-windows-v${{ inputs.version }}-upgrade.zip *
 
       - name: Create GitHub Tag
         id: create_tag
@@ -72,9 +68,7 @@ jobs:
           tag_name: v${{ inputs.version }}
           files: |
             /home/runner/releases/cs2bhop-linux-v${{ inputs.version }}.tar.gz
-            /home/runner/releases/cs2bhop-linux-v${{ inputs.version }}-upgrade.tar.gz
             /home/runner/releases/cs2bhop-windows-v${{ inputs.version }}.zip
-            /home/runner/releases/cs2bhop-windows-v${{ inputs.version }}-upgrade.zip
             /home/runner/releases/cs2bhop-version-v${{ inputs.version }}.json
-          generate_release_notes: true
+          body: initial release
           prerelease: false
