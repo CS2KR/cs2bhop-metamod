@@ -30,6 +30,9 @@ Per-map trigger aliases can be shared in `addons/cs2bhop/zones/<map>.json`:
 
 Use `!zoneexport` or `!savezones` after loading a map to save the detected start/end trigger aliases into that per-map JSON file.
 
+For migration from SharpTimer, trigger alias keys are also read from `cfg/SharpTimer/MapData/<map>.json` when present. Coordinate fake-zone keys
+such as `MapStartC1`/`MapStartC2` are intentionally not treated as entity detection.
+
 The detected trigger bounds are passed through the same timer start/end path as official Mapping API zones, so later global/API compatibility can converge on the same course and mode descriptors.
 
 ## Builds
