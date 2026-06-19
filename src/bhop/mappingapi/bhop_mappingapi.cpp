@@ -8,6 +8,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <vector>
 
 #include "bhop/bhop.h"
 #include "bhop/mode/bhop_mode.h"
@@ -21,6 +22,7 @@
 #include "bhop/db/bhop_db.h"
 #include "bhop/language/bhop_language.h"
 #include "utils/simplecmds.h"
+#include "utils/utils.h"
 #include "UtlSortVector.h"
 #include "vendor/json/single_include/nlohmann/json.hpp"
 
@@ -56,6 +58,8 @@ static_global struct
 	CUtlVectorFixed<BhopTrigger, 2048> triggers;
 	CUtlVector<CUtlString> fakeStartTriggerNames;
 	CUtlVector<CUtlString> fakeEndTriggerNames;
+	CUtlVector<CUtlString> detectedFakeStartTriggerNames;
+	CUtlVector<CUtlString> detectedFakeEndTriggerNames;
 	bool roundIsStarting;
 	i32 errorFlags;
 	i32 errorCount;
@@ -112,6 +116,15 @@ static_function bool Mapi_HasConfiguredTriggerName(const CUtlVector<CUtlString> 
 	return false;
 }
 
+static_function void Mapi_AddUniqueTriggerName(CUtlVector<CUtlString> &names, const char *name)
+{
+	if (!name || !name[0] || Mapi_HasConfiguredTriggerName(names, name))
+	{
+		return;
+	}
+	names.AddToTail(name);
+}
+
 static_function void Mapi_AddConfiguredTriggerName(CUtlVector<CUtlString> &names, const nlohmann::json &json, const char *key)
 {
 	if (!json.contains(key))
@@ -122,10 +135,7 @@ static_function void Mapi_AddConfiguredTriggerName(CUtlVector<CUtlString> &names
 	if (value.is_string())
 	{
 		std::string name = value.get<std::string>();
-		if (!name.empty())
-		{
-			names.AddToTail(name.c_str());
-		}
+		Mapi_AddUniqueTriggerName(names, name.c_str());
 		return;
 	}
 	if (!value.is_array())
@@ -139,11 +149,60 @@ static_function void Mapi_AddConfiguredTriggerName(CUtlVector<CUtlString> &names
 			continue;
 		}
 		std::string name = entry.get<std::string>();
-		if (!name.empty())
-		{
-			names.AddToTail(name.c_str());
-		}
+		Mapi_AddUniqueTriggerName(names, name.c_str());
 	}
+}
+
+static_function void Mapi_AddZoneExportKeys(nlohmann::json &json, const char *singleKey, const char *arrayKey, const CUtlVector<CUtlString> &names)
+{
+	if (names.Count() <= 0)
+	{
+		return;
+	}
+
+	json[singleKey] = names[0].Get();
+
+	if (names.Count() <= 1)
+	{
+		return;
+	}
+
+	json[arrayKey] = nlohmann::json::array();
+	FOR_EACH_VEC(names, i)
+	{
+		json[arrayKey].push_back(names[i].Get());
+	}
+}
+
+static_function bool Mapi_ExportFakeZoneConfig(char *relativePath, size_t relativePathSize)
+{
+	bool hasMapName = false;
+	CUtlString currentMap = g_pBhopUtils->GetCurrentMapName(&hasMapName);
+	if (!hasMapName || g_mappingApi.mapApiVersion != BHOP_NO_MAPAPI_VERSION)
+	{
+		return false;
+	}
+
+	if (g_mappingApi.detectedFakeStartTriggerNames.Count() <= 0 || g_mappingApi.detectedFakeEndTriggerNames.Count() <= 0)
+	{
+		return false;
+	}
+
+	nlohmann::json json;
+	Mapi_AddZoneExportKeys(json, "MapStartTrigger", "MapStartTriggers", g_mappingApi.detectedFakeStartTriggerNames);
+	Mapi_AddZoneExportKeys(json, "MapEndTrigger", "MapEndTriggers", g_mappingApi.detectedFakeEndTriggerNames);
+
+	char path[1024];
+	g_SMAPI->PathFormat(path, sizeof(path), "addons/cs2bhop/zones/%s.json", currentMap.Get());
+	std::string output = json.dump(2);
+	output.push_back('\n');
+	std::vector<char> buffer(output.begin(), output.end());
+
+	if (relativePath && relativePathSize > 0)
+	{
+		V_snprintf(relativePath, relativePathSize, "%s", path);
+	}
+	return utils::WriteBufferToFile(path, buffer);
 }
 
 static_function void Mapi_LoadFakeZoneConfig()
@@ -412,7 +471,16 @@ static_function void Mapi_OnTriggerMultipleSpawn(const EntitySpawnInfo_t *info)
 				if (Mapi_IsFakeStartZoneName(name) || Mapi_IsFakeEndZoneName(name))
 				{
 					snprintf(trigger.zone.courseDescriptor, sizeof(trigger.zone.courseDescriptor), BHOP_NO_MAPAPI_COURSE_DESCRIPTOR);
-					trigger.type = Mapi_IsFakeStartZoneName(name) ? BHOPTRIGGER_ZONE_START : BHOPTRIGGER_ZONE_END;
+					if (Mapi_IsFakeStartZoneName(name))
+					{
+						trigger.type = BHOPTRIGGER_ZONE_START;
+						Mapi_AddUniqueTriggerName(g_mappingApi.detectedFakeStartTriggerNames, name.c_str());
+					}
+					else
+					{
+						trigger.type = BHOPTRIGGER_ZONE_END;
+						Mapi_AddUniqueTriggerName(g_mappingApi.detectedFakeEndTriggerNames, name.c_str());
+					}
 				}
 
 				// STAGE HOOK
@@ -1275,6 +1343,23 @@ SCMD(bhop_courses, SCFL_MAP)
 	ListCourses(player);
 	return MRES_SUPERCEDE;
 }
+
+SCMD(bhop_zoneexport, SCFL_MAP)
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(controller);
+	char relativePath[1024];
+	if (!Mapi_ExportFakeZoneConfig(relativePath, sizeof(relativePath)))
+	{
+		player->PrintChat(true, false, "No fake start/end trigger pair was detected for this map.");
+		return MRES_SUPERCEDE;
+	}
+
+	player->PrintChat(true, false, "Saved fake zone trigger aliases to %s.", relativePath);
+	player->PrintConsole(false, false, "Saved fake zone trigger aliases to %s.", relativePath);
+	return MRES_SUPERCEDE;
+}
+
+SCMD_LINK(bhop_savezones, bhop_zoneexport);
 
 SCMD(bhop_course, SCFL_MAP)
 {

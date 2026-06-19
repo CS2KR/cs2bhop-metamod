@@ -950,6 +950,18 @@
 		"lv"		"Display the current course and the list of all courses in the map."
 		"pt"		"Retorna o curso atual, e uma lista de todos os cursos."
 	}
+	"Command Description - bhop_zoneexport"
+	{
+		"en"		"Save detected fake start/end trigger aliases for the current map."
+		"chi"		"Save detected fake start/end trigger aliases for the current map."
+		"sv"		"Save detected fake start/end trigger aliases for the current map."
+		"ua"		"Save detected fake start/end trigger aliases for the current map."
+		"tr"		"Save detected fake start/end trigger aliases for the current map."
+		"ko"		"Save detected fake start/end trigger aliases for the current map."
+		"es"		"Save detected fake start/end trigger aliases for the current map."
+		"lv"		"Save detected fake start/end trigger aliases for the current map."
+		"pt"		"Save detected fake start/end trigger aliases for the current map."
+	}
 	"Command Description - bhop_spb"
 	{
 		"en"		"Retrieve server personal best statistics."

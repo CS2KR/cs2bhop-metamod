@@ -27,6 +27,8 @@ Per-map trigger aliases can be shared in `addons/cs2bhop/zones/<map>.json`:
 }
 ```
 
+Use `!zoneexport` or `!savezones` after loading a map to save the detected start/end trigger aliases into that per-map JSON file.
+
 The detected trigger bounds are passed through the same timer start/end path as official Mapping API zones, so later global/API compatibility can converge on the same course and mode descriptors.
 
 ## Builds
