@@ -769,30 +769,11 @@ cxx = MMSPlugin.sdk_target.cxx
 binary = configure_main(sdk_target, sdk, cxx)
 # Mode binaries
 css_binary = configure_css(sdk, cxx)
-# Style binaries
-lg_binary = configure_lg(sdk, cxx)
-hg_binary = configure_hg(sdk, cxx)
-sw_binary = configure_sw(sdk, cxx)
-hsw_binary = configure_hsw(sdk, cxx)
-ow_binary = configure_ow(sdk, cxx)
-tas_binary = configure_tas(sdk, cxx)
-_3500vel_binary = configure_3500vel(sdk, cxx)
-_5000vel_binary = configure_5000vel(sdk, cxx)
-_10000vel_binary = configure_10000vel(sdk, cxx)
 
 protoc_builder = get_proto_builder(builder, sdk_target, sdk)
 
 binary.custom = [protoc_builder]
 css_binary.custom = [protoc_builder]
-lg_binary.custom = [protoc_builder]
-hg_binary.custom = [protoc_builder]
-sw_binary.custom = [protoc_builder]
-hsw_binary.custom = [protoc_builder]
-ow_binary.custom = [protoc_builder]
-tas_binary.custom = [protoc_builder]
-_3500vel_binary.custom = [protoc_builder]
-_5000vel_binary.custom = [protoc_builder]
-_10000vel_binary.custom = [protoc_builder]
 
 # We have to split nodes here because they will be put into different folders.
 # Main
@@ -803,33 +784,11 @@ mode_nodes = [
   builder.Add(css_binary)
 ]
 
-# Styles
-style_nodes = [
-  builder.Add(lg_binary),
-  builder.Add(hg_binary),
-  builder.Add(sw_binary),
-  builder.Add(hsw_binary),
-  builder.Add(ow_binary),
-  builder.Add(tas_binary),
-  builder.Add(_3500vel_binary),
-  builder.Add(_5000vel_binary),
-  builder.Add(_10000vel_binary)
-]
+style_nodes = []
 
 # If we are generating a VS project, make sure to add the modes in, and the build folder for linter.
 if builder.options.generator == 'vs':
   binary.sources += css_binary.sources
-  binary.sources += lg_binary.sources
-  binary.sources += hg_binary.sources
-  binary.sources += sw_binary.sources
-  binary.sources += hsw_binary.sources
-  binary.sources += ow_binary.sources
-  binary.sources += ff_binary.sources
-  binary.sources += sm_binary.sources
-  binary.sources += tas_binary.sources
-  binary.sources += _3500vel_binary.sources
-  binary.sources += _5000vel_binary.sources
-  binary.sources += _10000vel_binary.sources
   binary.compiler.cxxincludes += [os.path.join(builder.buildPath, MMSPlugin.metadata['name'], f'{binary.compiler.target.platform}-{cxx.target.arch}')]
 
 MMSPlugin.binaries += [nodes]
