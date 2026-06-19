@@ -11,6 +11,9 @@ on:
         required: true
         type: boolean
 
+permissions:
+  contents: write
+
 jobs:
   build:
     if: github.ref == 'refs/heads/master'
