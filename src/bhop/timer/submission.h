@@ -6,6 +6,7 @@
 
 #include "bhop/timer/bhop_timer.h"
 #include "bhop/global/api.h"
+#include "bhop/global/events.h"
 #include "utils/uuid.h"
 
 struct RunSubmission
