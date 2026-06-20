@@ -7,6 +7,7 @@
 #include <sstream>
 #include <vector>
 
+#include "sdk/datatypes.h"
 #include "bhop/mappingapi/bhop_mappingapi.h"
 #include "utils/utils.h"
 
