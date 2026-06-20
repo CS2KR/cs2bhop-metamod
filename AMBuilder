@@ -99,6 +99,7 @@ def configure_main(sdk_target, sdk, cxx):
     os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'find_player.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'find_records.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'migrations.cpp'),
+    os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'rename_run.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'save_prefs.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'save_time.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'db', 'setup_client.cpp'),
@@ -158,6 +159,7 @@ def configure_main(sdk_target, sdk, cxx):
     os.path.join(builder.sourcePath, 'src', 'bhop', 'tip', 'bhop_tip.cpp'),
     
     os.path.join(builder.sourcePath, 'src', 'bhop', 'mappingapi', 'bhop_mappingapi.cpp'),
+    os.path.join(builder.sourcePath, 'src', 'bhop', 'zoning', 'bhop_zoning.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'trigger', 'callbacks.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'trigger', 'bhop_trigger.cpp'),
     os.path.join(builder.sourcePath, 'src', 'bhop', 'trigger', 'mapping_api.cpp'),

@@ -32,8 +32,7 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	  time(player->timerService->GetTime())
 {
 	this->local = BhopDatabaseService::IsReady() && BhopDatabaseService::IsMapSetUp();
-	// this->global = player->hasPrime && BhopGlobalService::IsAvailable();
-	this->global = false;
+	this->global = player->hasPrime && BhopGlobalService::MayBecomeAvailable();
 	if (bhop_debug_announce_global.Get() && !this->global)
 	{
 		if (!player->hasPrime)
@@ -53,8 +52,8 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	auto mode = Bhop::mode::GetModeInfo(player->modeService);
 	this->mode.name = mode.shortModeName;
 	Bhop::API::Mode apiMode;
-	bool hasGlobalApiMode = Bhop::API::DecodeModeString(this->mode.name, apiMode);
-	if (!hasGlobalApiMode)
+	this->global = this->global && Bhop::API::DecodeModeString(this->mode.name, apiMode);
+	if (!this->global)
 	{
 		if (bhop_debug_announce_global.Get())
 		{
@@ -84,16 +83,14 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 	this->course.localID = player->timerService->GetCourse()->localDatabaseID;
 	if (this->local && this->course.localID <= 0)
 	{
-		this->waitingForLocalCourseID = true;
-		Bhop::course::SetupLocalCourses();
+		this->local = false;
 	}
 
 	// clang-format off
 
-	/*
-	BhopGlobalService::WithCurrentMap([&](const std::optional<Bhop::API::Map> &currentMap)
+	BhopGlobalService::WithCurrentMap([&](const Bhop::API::Map *currentMap)
 	{
-		this->global = currentMap.has_value();
+		this->global = this->global && currentMap != nullptr;
 
 		if (!currentMap)
 		{
@@ -146,7 +143,6 @@ RunSubmission::RunSubmission(BhopPlayer *player)
 			}
 		}
 	});
-	*/
 
 	// clang-format on
 
@@ -189,12 +185,95 @@ void RunSubmission::Start()
 	// Exception: non-global runs insert to DB immediately (no UUID synchronization needed).
 	if (global)
 	{
-		// TODO: Finalize submission once global api ready
-		// SubmitGlobal();
+		SubmitGlobal();
 	}
 	else if (local)
 	{
-		// No global UUID to wait for; insert now if the course already has a local DB ID.
+		// No global UUID to wait for; insert now with the locally-generated UUID.
+		SubmitLocal(localUUID.ToString().c_str());
+	}
+}
+
+// ---------------------------------------------------------------------------
+// API response
+// ---------------------------------------------------------------------------
+
+void RunSubmission::SubmitGlobal()
+{
+	BhopPlayer *player = g_pBhopPlayerManager->ToPlayer(this->userID);
+	if (!player)
+	{
+		this->global = false;
+		return;
+	}
+
+	auto callback = [uid = this->uid](Bhop::API::events::NewRecordAck &ack) { RunSubmission::OnGlobalRecordSubmitted(ack, uid); };
+	BhopGlobalService::SubmitRecordResult submissionResult =
+		player->globalService->SubmitRecord(this->globalFilterID, this->time, this->mode.md5, &this->styles, this->metadata, std::move(callback));
+
+	if (bhop_debug_announce_global.Get())
+	{
+		META_CONPRINTF("[Bhop::Global - %u] Global record submission result: %d\n", uid, static_cast<int>(submissionResult));
+	}
+
+	switch (submissionResult)
+	{
+		case BhopGlobalService::SubmitRecordResult::PlayerNotAuthenticated:
+		case BhopGlobalService::SubmitRecordResult::MapNotGlobal:
+		case BhopGlobalService::SubmitRecordResult::NotConnected:
+		{
+			this->global = false;
+			if (this->local)
+			{
+				SubmitLocal(localUUID.ToString().c_str());
+			}
+			break;
+		}
+		case BhopGlobalService::SubmitRecordResult::Queued:
+		{
+			this->pendingQueuedSubmission = true;
+			break;
+		}
+		case BhopGlobalService::SubmitRecordResult::Submitted:
+		{
+			this->global = true;
+			break;
+		}
+	}
+}
+
+void RunSubmission::OnAPIResponse(const Bhop::API::events::NewRecordAck &ack)
+{
+	apiResponseReceived = true;
+	globalResponse.received = true;
+	globalResponse.recordId = ack.recordId;
+	globalResponse.overall.rank = ack.overallData.rank;
+	globalResponse.overall.points = ack.overallData.points;
+	globalResponse.overall.maxRank = ack.overallData.leaderboardSize;
+
+	pendingQueuedSubmission = false;
+
+	if (finalized)
+	{
+		DoLateAPIResponse(ack.recordId);
+	}
+	else
+	{
+		if (replayReady && !ack.recordId.empty())
+		{
+			UUID_t apiFinalUUID(ack.recordId.c_str());
+			if (!(finalUUID == apiFinalUUID))
+			{
+				if (g_asyncFileIO)
+				{
+					char oldPath[512], newPath[512];
+					BuildReplayPath(oldPath, sizeof(oldPath), finalUUID);
+					BuildReplayPath(newPath, sizeof(newPath), apiFinalUUID);
+					g_asyncFileIO->QueueRename(oldPath, newPath);
+				}
+				finalUUID = apiFinalUUID;
+			}
+		}
 		TryFinalize();
 	}
 }
@@ -210,16 +289,13 @@ void RunSubmission::OnReplayReady(std::vector<char> &&buffer)
 
 	// Eagerly resolve finalUUID if the API already responded, so the disk write uses the
 	// right path. If the API responds later, DoLateAPIResponse handles the rename.
-	/*
 	if (apiResponseReceived && !globalResponse.recordId.empty())
 	{
 		finalUUID = UUID_t(globalResponse.recordId.c_str());
 	}
-	*/
 
 	// Write replay to disk and notify the player regardless of local/global state.
-	//    QueueWriteBuffer takes the buffer by value, so replayBuffer is copy-constructed
-	//    and the original remains available for QueueReplayUpload below.
+	// QueueWriteBuffer takes the buffer by value, so replayBuffer remains available.
 	char replayPath[512];
 	BuildReplayPath(replayPath, sizeof(replayPath), finalUUID);
 	if (g_asyncFileIO)
@@ -232,6 +308,11 @@ void RunSubmission::OnReplayReady(std::vector<char> &&buffer)
 			callbackPlayer->languageService->PrintChat(true, false, "Replay - Run Replay Saved", finalUUID.ToString().c_str());
 			callbackPlayer->languageService->PrintConsole(false, false, "Replay - Run Replay Saved (Console)", finalUUID.ToString().c_str());
 		}
+	}
+
+	if (finalized)
+	{
+		return;
 	}
 
 	TryFinalize();
@@ -255,23 +336,8 @@ void RunSubmission::TryFinalize()
 		return;
 	}
 
-	if (!replayReady && global)
-	{
-		return;
-	}
-
 	const f64 now = g_pBhopUtils->GetServerGlobals()->realtime;
 	const bool timeoutReached = now >= (timestamp + RunSubmission::timeout);
-
-	if (local && !localSubmitted && !TryResolveLocalCourseID())
-	{
-		if (!timeoutReached)
-		{
-			return;
-		}
-
-		local = false;
-	}
 
 	// For global runs that haven't heard back from the API yet:
 	// keep waiting unless we've timed out or the run was only queued (offline).
@@ -305,23 +371,33 @@ void RunSubmission::TryFinalize()
 	*/
 }
 
-bool RunSubmission::TryResolveLocalCourseID()
+// ---------------------------------------------------------------------------
+// Late API response (API replied after we already finalized with localUUID)
+// ---------------------------------------------------------------------------
+
+void RunSubmission::DoLateAPIResponse(const std::string &apiUUID)
 {
-	if (this->course.localID > 0)
+	if (apiUUID.empty())
 	{
-		this->waitingForLocalCourseID = false;
-		return true;
+		return;
 	}
 
-	const BhopCourseDescriptor *course = Bhop::course::GetCourse(this->course.name.c_str(), false);
-	if (!course || course->localDatabaseID <= 0)
+	UUID_t apiFinalUUID(apiUUID.c_str());
+
+	if (g_asyncFileIO)
 	{
-		return false;
+		char oldPath[512], newPath[512];
+		BuildReplayPath(oldPath, sizeof(oldPath), localUUID);
+		BuildReplayPath(newPath, sizeof(newPath), apiFinalUUID);
+		g_asyncFileIO->QueueRename(oldPath, newPath);
 	}
 
-	this->course.localID = course->localDatabaseID;
-	this->waitingForLocalCourseID = false;
-	return true;
+	if (localSubmitted)
+	{
+		BhopDatabaseService::UpdateRunUUID(localUUID.ToString().c_str(), apiUUID.c_str(), nullptr, nullptr);
+	}
+
+	finalUUID = apiFinalUUID;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,6 +560,17 @@ void RunSubmission::CheckAll()
 		}),
 		submissions.end());
 	// clang-format on
+}
+
+void RunSubmission::OnGlobalRecordSubmitted(const Bhop::API::events::NewRecordAck &ack, u32 uid)
+{
+	RunSubmission *sub = RunSubmission::Get(uid);
+	if (!sub)
+	{
+		return;
+	}
+
+	sub->OnAPIResponse(ack);
 }
 
 // ---------------------------------------------------------------------------

@@ -36,17 +36,8 @@
 	{
 		"en"	"{grey}Don't want to see other players? Use {default}/hide{grey}."
 		"chi"	"{grey}不想看到其他玩家？ 输入 {default}/hide{grey} 切换显示或隐藏."
-		"pl"	"{grey}Nie chcesz widzieć innych graczy? Użyj {default}/hide{grey}."
-		"fi"	"{grey}Etkö halua nähdä muita pelaajia? Käytä {default}/hide{grey} komentoa."
-		"sv"	"{grey}Vill du inte se andra spelare? Använd {default}/hide{grey}."
-		"ua"	"{grey}Не хочете бачити інших гравців? Напишіть в чат {default}/hide{grey}."
 		"tr"	"{grey}Diğer oyuncuları görmek istemiyorsan {default}/hide{grey} kullanabilirsin."
-		"it"	"{grey}No vuoi vedere gli altri giocatori? Scrivi {default}/hide{grey}."
-		"es"	"{grey}¿No quieres ver a otros jugadores? Usa {default}/hide{grey}."
-		"de"	"{grey}Möchtest du andere Spieler nicht sehen? Verwende {default}/hide{grey}."
 		"ko"	"{grey}다른 플레이어를 보고 싶지 않으면 {default}/hide{grey}를 사용하세요."
-		"lv"	"{grey}Nevēlies redzēt citus spēlētājus? Izmanto {default}/hide{grey}."
-		"pt"	"{grey}Não quer ver outros jogadores? Use {default}/hide{grey}."
 	}
 	"Tip - bhop_hideweapon"
 	{
@@ -54,7 +45,6 @@
 		"chi"	"{grey}输入 {default}/hideweapon {grey}可以关掉枪械模型显示."
 		"pl"	"{grey}Użyj {default}/hideweapon {grey}aby włączyć lub wyłączyć widoczność broni."
 		"fi"	"{grey}Kirjoita {default}/hideweapon {grey}vaihtaaksesi aseesi näkyvyyden asetusta."
-		"sv"	"{grey}Vill du ändra ditt vapens synlighet? Använd {default}/hide{grey}."
 		"ua"	"{grey}Напишіть в чат {default}/hideweapon {grey}щоб сховати/показати вашу зброю."
 		"tr"	"{grey}{default}/hideweapon {grey}yazarak silahını gizleyebilirsin."
 		"it"	"{grey}Scrivi {default}/hideweapon {grey}per cambiare la visibilità dell'arma."

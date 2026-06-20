@@ -455,8 +455,6 @@
 		"chi"		"列出或更改模式."
 		"pl"		"Lista trybów gry bądź jego zmiana."
 		"fi"		"Listaa tai vaihda moodia."
-		"sv"		"Lista eller ändra KZ mode."
-		"ua"		"Відобразити чи змінити KZ режим."
 		"tr"		"Modları listele veya değiştir"
 		"it"		"Elenca o cambia modalità."
 		"es"		"Listar o cambiar modo."
@@ -722,7 +720,6 @@
 	{
 		"en"		"Restart."
 		"chi"		"重新开始."
-		"pl"		"Restart."
 		"fi"		"Aloita alusta."
 		"sv"		"Starta om."
 		"ua"		"Рестарт."
@@ -738,7 +735,6 @@
 	{
 		"en"		"Restart."
 		"chi"		"重新开始."
-		"pl"		"Restart."
 		"fi"		"Aloita alusta."
 		"sv"		"Starta om."
 		"ua"		"Рестарт."
@@ -958,14 +954,6 @@
 	"Command Description - bhop_zoneexport"
 	{
 		"en"		"Save detected fake start/end trigger aliases for the current map."
-		"chi"		"Save detected fake start/end trigger aliases for the current map."
-		"sv"		"Save detected fake start/end trigger aliases for the current map."
-		"ua"		"Save detected fake start/end trigger aliases for the current map."
-		"tr"		"Save detected fake start/end trigger aliases for the current map."
-		"ko"		"Save detected fake start/end trigger aliases for the current map."
-		"es"		"Save detected fake start/end trigger aliases for the current map."
-		"lv"		"Save detected fake start/end trigger aliases for the current map."
-		"pt"		"Save detected fake start/end trigger aliases for the current map."
 	}
 	"Command Description - bhop_spb"
 	{

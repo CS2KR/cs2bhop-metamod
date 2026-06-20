@@ -110,17 +110,6 @@
 		"#format"	"time:s,stop_text:s,pause_text:s"
 		"en"		"{time}{stop_text}{pause_text}"
 		"chi"		"计时: {time}{stop_text}{pause_text}"
-		"pl"		"{time}{stop_text}{pause_text}"
-		"fi"		"{time}{stop_text}{pause_text}"
-		"sv"		"{time}{stop_text}{pause_text}"
-		"ua"		"{time}{stop_text}{pause_text}"
-		"tr"		"{time}{stop_text}{pause_text}"
-		"it"		"{time}{stop_text}{pause_text}"
-		"es"		"{time}{stop_text}{pause_text}"
-		"de"		"{time}{stop_text}{pause_text}"
-		"ko"		"{time}{stop_text}{pause_text}"
-		"lv"		"{time}{stop_text}{pause_text}"
-		"pt"		"{time}{stop_text}{pause_text}"
 	}
 	"HUD - Stage Text"
 	{
@@ -146,18 +135,6 @@
 		// 01:23:45 (STOPPED) (PAUSED)
 		"#format"	"key_text:s,stage_text:s,timer_text:s,speed_text:s"
 		"en"		"{stage_text}\n{timer_text}"
-		"chi"		"{stage_text}\n{timer_text}"
-		"pl"		"{stage_text}\n{timer_text}"
-		"fi"		"{stage_text}\n{timer_text}"
-		"sv"		"{stage_text}\n{timer_text}"
-		"ua"		"{stage_text}\n{timer_text}"
-		"tr"		"{stage_text}\n{timer_text}"
-		"it"		"{stage_text}\n{timer_text}"
-		"es"		"{stage_text}\n{timer_text}"
-		"de"		"{stage_text}\n{timer_text}"
-		"ko"		"{stage_text}\n{timer_text}"
-		"lv"		"{stage_text}\n{timer_text}"
-		"pt"		"{stage_text}\n{timer_text}"
 	}
 	// This text is actually "more" center.
 	"HUD - Alert Text"
@@ -165,18 +142,6 @@
 		// Unused
 		"#format"	"key_text:s,checkpoint_text:s,timer_text:s,speed_text:s"
 		"en"		""
-		"chi"		""
-		"pl"		""
-		"fi"		""
-		"sv"		""
-		"ua"		""
-		"tr"		""
-		"it"		""
-		"es"		""
-		"de"		""
-		"ko"		""
-		"lv"		""
-		"pt"		""
 	}
 	"HUD - HTML Center Text"
 	{
@@ -184,18 +149,6 @@
 		// Keys: A W S D C J
 		"#format"	"key_text:s,stage_text:s,timer_text:s,speed_text:s"
 		"en"		"{speed_text}<br>{key_text}"
-		"chi"		"{speed_text}<br>{key_text}"
-		"pl"		"{speed_text}<br>{key_text}"
-		"fi"		"{speed_text}<br>{key_text}"
-		"sv"		"{speed_text}<br>{key_text}"
-		"ua"		"{speed_text}<br>{key_text}"
-		"tr"		"{speed_text}<br>{key_text}"
-		"it"		"{speed_text}<br>{key_text}"
-		"es"		"{speed_text}<br>{key_text}"
-		"de"		"{speed_text}<br>{key_text}"
-		"ko"		"{speed_text}<br>{key_text}"
-		"lv"		"{speed_text}<br>{key_text}"
-		"pt"		"{speed_text}<br>{key_text}"
 	}
 
 	"HUD - HTML Panel Disabled"

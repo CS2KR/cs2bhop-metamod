@@ -87,7 +87,6 @@
 		"chi"		"可用风格:"
 		"pl"		"Możliwe style:"
 		"fi"		"Mahdolliset tyylit:"
-		"sv"		"Möjliga KZ styles:"
 		"ua"		"Доступні стилі:"
 		"tr"		"Mevcut stiller:"
 		"it"		"Stili disponibili:"

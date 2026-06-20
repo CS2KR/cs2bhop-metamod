@@ -13,7 +13,7 @@
 		"it"	"{grey}Scrivi {default}/help {grey}per vedere tutti i comandi disponibili per il bhop."
 		"es"	"{grey}Usa {default}/help {grey}para ver todos los comandos de bhop disponibles."
 
-		//"de"	"{grey}Verwende {default}/help {grey}, um alle verfügbaren KZ-Befehle anzuzeigen."
+		//"de"	"{grey}Verwende {default}/help {grey}, um alle verfügbaren Bhop-Befehle anzuzeigen."
 
 		"ko"	"{grey}모든 사용 가능한 bhop 명령어를 보려면 {default}/help {grey}를 사용하세요."
 		"lv"	"{grey}Izmanto {default}/help {grey}, lai apskatītu visus pieejamās bhop komandas."
@@ -75,18 +75,9 @@
 	"Tip - bhop_tips"
 	{
 		"en"	"{grey}Don't need tips like this showing up in chat? You can toggle them with {default}/tips{grey}."
-		"chi"	"{grey}不需要这些提示? 可以使用 {default}/tips{grey} 切换开关."
-		"pl"	"{grey}Nie potrzebujesz wskazówek na czacie? Możesz je wyłączyć używając {default}/tips{grey}."
-		"fi"	"{grey}Etkö tarvitse vihejeitä kuten tämä chatissasi? Voit muuttaa niiden asetusta {default}/tips{grey} komennolla."
-		"sv"	"{grey}Vill du inte se tips som dessa i chatten? Du kan ändra det med {default}/tips{grey}."
 		"ua"	"{grey}Якщо ви не хочете бачити такі поради в чаті, то вимкніть їх написавши {default}/tips{grey}."
 		"tr"	"{grey}Sohbetteki önerilerin çıkmasını istemiyorsan veya ihtiyacın yoksa bu komutla kapatabilirsin {default}/tips{grey}."
-		"it"	"{grey}Non vuoi suggerimenti in chat? Puoi cambiarne la visibilità con {default}/tips{grey}."
-		"es"	"{grey}¿No necesitas consejos como éstos apareciendo en tu chat? Puedes alternarlos con {default}/tips{grey}."
-		"de"	"{grey}Brauchst du solche Tipps nicht, die im Chat angezeigt werden? Du kannst sie mit {default}/tips{grey} ein- oder ausschalten."
 		"ko"	"{grey}이런 팁이 채팅에 표시되지 않게 하려면 {default}/tips{grey}로 전환할 수 있습니다."
-		"lv"	"{grey}Negribi, lai šādi padomi parādās čatā? Tu vari tos izslēgt ar {default}/tips{grey}."
-		"pt"	"{grey}Não precisa de dicas como esta aparecendo no chat? Você pode desativar/ativar elas com {default}/tips{grey}."
 	}
 	"Tip - bind"
 	{

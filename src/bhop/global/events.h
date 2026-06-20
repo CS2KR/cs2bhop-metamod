@@ -78,7 +78,7 @@ namespace Bhop::API::events
 			u64 leaderboardSize {};
 		};
 
-		u32 recordId {};
+		std::string recordId {};
 		f64 playerRating {};
 		RecordData overallData {};
 

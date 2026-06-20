@@ -30,7 +30,6 @@ struct RunSubmission
 	bool finalized {};
 	bool runAnnounced {};
 	bool localSubmitted {};
-	bool waitingForLocalCourseID {};
 
 	std::vector<char> replayBuffer;
 
@@ -114,6 +113,7 @@ struct RunSubmission
 	} localResponse;
 
 	void OnReplayReady(std::vector<char> &&buffer);
+	void OnAPIResponse(const Bhop::API::events::NewRecordAck &ack);
 
 	static RunSubmission *Create(BhopPlayer *player)
 	{
@@ -151,7 +151,9 @@ private:
 
 	void TryFinalize();
 
-	bool TryResolveLocalCourseID();
+	void DoLateAPIResponse(const std::string &apiUUID);
+
+	void SubmitGlobal();
 
 	void SubmitLocal(const char *uuid);
 
@@ -159,6 +161,8 @@ private:
 
 	void AnnounceRun();
 	void AnnounceLocal();
+
+	static void OnGlobalRecordSubmitted(const Bhop::API::events::NewRecordAck &ack, u32 uid);
 
 	static inline std::vector<RunSubmission *> submissions;
 	static inline u32 idCount = 0;

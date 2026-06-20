@@ -78,7 +78,7 @@
 	{
 		// Replay Type: Run
 		// Course: Main
-		// Mode: Classic*
+		// Mode: 128tick*
 		// Time: 12:34.567
 		"#format"	"name:s,mode:s,time:s"
 		"en"		"Replay Type: Run\nCourse: {name}\nMode + Styles: {mode}\nTime: {time}"
